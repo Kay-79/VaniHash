@@ -5,6 +5,7 @@ import { INDEXER_URL } from '@/constants/chain';
 import { ListingCard } from '@/components/marketplace/ListingCard';
 import { MarketplaceStats } from '@/components/marketplace/MarketplaceStats';
 import { ListingTable } from '@/components/marketplace/ListingTable';
+import { ListingModal } from '@/components/marketplace/ListingModal';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { LayoutGrid, List } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -49,36 +50,42 @@ export default function MarketplacePage() {
 
     return (
         <DashboardLayout activityMode="market">
-             {/* Stats Header */}
-             <MarketplaceStats />
+            {/* Stats Header */}
+            <MarketplaceStats />
 
             {/* Toolbar */}
             <div className="flex items-center justify-between p-4 border-b border-gray-800 sticky top-0 bg-black/90 backdrop-blur z-10">
                 <div className="flex items-center gap-4">
                     <span className="text-white font-bold text-lg">{listings.length} Items</span>
                     <span className="text-sm text-gray-500 flex items-center gap-1">
-                        <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse"/> 
+                        <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
                         Live
                     </span>
+                    <div className="ml-4">
+                        <ListingModal
+                            kioskId="0xKIOSK_ID" // Placeholder
+                            kioskCapId="0xKIOSK_CAP_ID" // Placeholder
+                        />
+                    </div>
                 </div>
-                
+
                 <div className="flex items-center gap-2 bg-gray-900 p-1 rounded-lg border border-gray-800">
-                        <Button 
-                        variant={viewMode === 'grid' ? "secondary" : "ghost"} 
-                        size="sm" 
+                    <Button
+                        variant={viewMode === 'grid' ? "secondary" : "ghost"}
+                        size="sm"
                         className={`h-8 w-8 p-0 ${viewMode === 'grid' ? 'bg-gray-800 text-yellow-500' : 'text-gray-500'}`}
                         onClick={() => setViewMode('grid')}
-                        >
+                    >
                         <LayoutGrid className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                        variant={viewMode === 'list' ? "secondary" : "ghost"} 
-                        size="sm" 
+                    </Button>
+                    <Button
+                        variant={viewMode === 'list' ? "secondary" : "ghost"}
+                        size="sm"
                         className={`h-8 w-8 p-0 ${viewMode === 'list' ? 'bg-gray-800 text-yellow-500' : 'text-gray-500'}`}
                         onClick={() => setViewMode('list')}
-                        >
+                    >
                         <List className="h-4 w-4" />
-                        </Button>
+                    </Button>
                 </div>
             </div>
 
@@ -89,19 +96,19 @@ export default function MarketplacePage() {
                 ) : (
                     <>
                         {listings.length > 0 ? (
-                             viewMode === 'grid' ? (
+                            viewMode === 'grid' ? (
                                 <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                                     {listings.map((listing) => (
-                                        <ListingCard 
-                                            key={listing.listing_id} 
-                                            listing={listing} 
+                                        <ListingCard
+                                            key={listing.listing_id}
+                                            listing={listing}
                                             onBuySuccess={fetchListings}
                                         />
                                     ))}
                                 </div>
-                             ) : (
-                                 <ListingTable listings={listings} onBuySuccess={fetchListings} />
-                             )
+                            ) : (
+                                <ListingTable listings={listings} onBuySuccess={fetchListings} />
+                            )
                         ) : (
                             <div className="col-span-full py-20 flex flex-col items-center justify-center text-gray-500">
                                 <p className="text-lg">No active listings found</p>

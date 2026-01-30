@@ -4,6 +4,7 @@ import { createNetworkConfig, SuiClientProvider, WalletProvider } from '@mysten/
 import { getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@mysten/dapp-kit/dist/index.css';
+import { ThemeProvider } from 'next-themes';
 
 const networks = createNetworkConfig({
   testnet: { url: getJsonRpcFullnodeUrl('testnet'), network: 'testnet' },
@@ -15,11 +16,13 @@ const queryClient = new QueryClient();
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
-      <SuiClientProvider networks={networks.networkConfig} defaultNetwork="testnet">
-        <WalletProvider>
-          {children}
-        </WalletProvider>
-      </SuiClientProvider>
+      <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
+        <SuiClientProvider networks={networks.networkConfig} defaultNetwork="testnet">
+          <WalletProvider>
+            {children}
+          </WalletProvider>
+        </SuiClientProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }

@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Pickaxe, Coins, Server } from 'lucide-react';
+// Placeholder data - in real app, fetch from Indexer/Kiosk
 
 export function MinerStats() {
     return (
@@ -32,6 +33,7 @@ export function MinerStats() {
                     </CardContent>
                 </Card>
             </div>
+
         </div>
     );
 }
