@@ -19,7 +19,17 @@ export function useFetchTasks() {
             if (status && status !== 'ALL') query.set('status', status);
 
             const res = await fetch(`/api/tasks?${query.toString()}`);
+
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                throw new Error(errorData.error || `API Error: ${res.status}`);
+            }
+
             const data = await res.json() as Task[];
+            if (!Array.isArray(data)) {
+                throw new Error("Invalid API response: expected array");
+            }
+
             setTasks(data);
             setError(null);
         } catch (e) {

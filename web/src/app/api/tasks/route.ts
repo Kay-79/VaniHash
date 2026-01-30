@@ -31,6 +31,7 @@ export async function GET(request: NextRequest) {
 
         return NextResponse.json(serialized);
     } catch (e) {
+        console.error("API /api/tasks error:", e);
         return NextResponse.json({ error: (e as Error).message }, { status: 500 });
     }
 }

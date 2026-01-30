@@ -23,7 +23,7 @@ export function MinerStats() {
                 </Card>
                 <Card className="bg-gray-900/50 border-gray-800">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-400">SUI Earned</CardTitle>
+                        <CardTitle className="text-sm font-medium text-gray-400">Total Rewards</CardTitle>
                         <Coins className="h-4 w-4 text-purple-500" />
                     </CardHeader>
                     <CardContent>
