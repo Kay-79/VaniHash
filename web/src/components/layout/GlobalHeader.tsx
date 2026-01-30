@@ -1,5 +1,7 @@
+'use client';
+
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Badge } from "@/components/ui/Badge";
 import { WalletConnect } from '@/components/ui/WalletConnect';
 import { Search } from 'lucide-react';
@@ -8,6 +10,18 @@ import { cn } from '@/lib/utils';
 
 export function GlobalHeader() {
     const pathname = usePathname();
+    const router = useRouter();
+    const searchParams = useSearchParams();
+
+    const handleSearch = (term: string) => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (term) {
+            params.set('search', term);
+        } else {
+            params.delete('search');
+        }
+        router.replace(`${pathname}?${params.toString()}`);
+    };
 
     const isActive = (path: string) => pathname === path;
 
@@ -61,6 +75,8 @@ export function GlobalHeader() {
                     <Input 
                         placeholder="Search collections, tasks..." 
                         className="pl-9 bg-gray-900 border-gray-800 focus:border-yellow-500 focus:ring-yellow-500/20 h-9" 
+                        defaultValue={searchParams.get('search') || ''}
+                        onChange={(e) => handleSearch(e.target.value)}
                     />
                 </div>
                 <WalletConnect />

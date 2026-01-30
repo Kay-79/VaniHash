@@ -4,11 +4,19 @@ import prisma from '@/lib/prisma';
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get('status');
+    const search = searchParams.get('search');
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
     try {
-        const where = status ? { status } : {};
+        const where: any = status ? { status } : {};
+        if (search) {
+            where.OR = [
+                { pattern: { contains: search, mode: 'insensitive' } },
+                { task_id: { contains: search, mode: 'insensitive' } },
+            ];
+        }
+
         const tasks = await prisma.task.findMany({
             where,
             orderBy: { timestamp_ms: 'desc' },

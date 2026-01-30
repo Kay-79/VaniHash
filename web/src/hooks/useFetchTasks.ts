@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Task } from '@/types';
-import { INDEXER_URL } from '@/constants/chain';
 
 export function useFetchTasks() {
+    const searchParams = useSearchParams();
+    const search = searchParams.get('search');
+
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
@@ -10,7 +13,10 @@ export function useFetchTasks() {
     const fetchTasks = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await fetch(`/api/tasks?limit=20`);
+            const query = new URLSearchParams({ limit: '20' });
+            if (search) query.set('search', search);
+
+            const res = await fetch(`/api/tasks?${query.toString()}`);
             const data = await res.json() as Task[];
             setTasks(data);
             setError(null);
@@ -20,7 +26,7 @@ export function useFetchTasks() {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [search]);
 
     useEffect(() => {
         fetchTasks();
