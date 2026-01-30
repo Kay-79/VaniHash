@@ -1,0 +1,5 @@
+target/
+build/
+Move.lock
+*.mv
+*.txt
