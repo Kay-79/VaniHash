@@ -2,10 +2,7 @@ module vanihash::marketplace;
 
 use sui::coin::{Self, Coin};
 use sui::event;
-use sui::object::{Self, UID, ID};
 use sui::sui::SUI;
-use sui::transfer;
-use sui::tx_context::{Self, TxContext};
 
 /// Error codes
 const EAmountIncorrect: u64 = 1;
@@ -38,7 +35,7 @@ public struct ItemDelisted<phantom T> has copy, drop {
 
 /// List an item for sale.
 /// Shared object is created holding the item.
-public entry fun list<T: key + store>(item: T, price: u64, ctx: &mut TxContext) {
+public fun list<T: key + store>(item: T, price: u64, ctx: &mut TxContext) {
     let id = object::new(ctx);
     let listing_id = object::uid_to_inner(&id);
 

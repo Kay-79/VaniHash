@@ -10,7 +10,7 @@ export function useFetchTasks() {
     const fetchTasks = useCallback(async () => {
         setLoading(true);
         try {
-            const res = await fetch(`${INDEXER_URL}/tasks?limit=20`);
+            const res = await fetch(`/api/tasks?limit=20`);
             const data = await res.json() as Task[];
             setTasks(data);
             setError(null);

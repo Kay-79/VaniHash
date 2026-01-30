@@ -1,11 +1,8 @@
 import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
-import sqlite3 from 'sqlite3';
-import { open, Database } from 'sqlite';
+import { PrismaClient } from '@prisma/client';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import express, { Request, Response } from 'express';
-import cors from 'cors';
 
 dotenv.config();
 
@@ -16,110 +13,14 @@ const __dirname = path.dirname(__filename);
 const PACKAGE_ID = process.env.VANIHASH_PACKAGE_ID || '0xa4f12914ac23fdd5f926be69a1392714fdd192a3e457b8665e3e78210db3171d';
 const MODULE_NAME = 'vanihash';
 const NETWORK = process.env.SUI_NETWORK || 'testnet';
-const PORT = process.env.PORT || 3000;
 
-// Database Init
-async function initDb(): Promise<Database> {
-    const db = await open({
-        filename: path.join(__dirname, '..', 'vanihash.db'),
-        driver: sqlite3.Database
-    });
-
-    await db.exec(`
-        CREATE TABLE IF NOT EXISTS tasks (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            task_id TEXT UNIQUE,
-            creator TEXT,
-            reward_amount TEXT,
-            pattern TEXT,
-            status TEXT,
-            tx_digest TEXT,
-            timestamp_ms INTEGER
-        );
-        CREATE TABLE IF NOT EXISTS cursors (
-            id TEXT PRIMARY KEY,
-            tx_digest TEXT,
-            event_seq TEXT
-        );
-        CREATE TABLE IF NOT EXISTS listings (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            listing_id TEXT UNIQUE,
-            seller TEXT,
-            price TEXT,
-            type TEXT,
-            status TEXT,
-            tx_digest TEXT,
-            timestamp_ms INTEGER
-        );
-    `);
-
-    return db;
-}
-
-// API Server
-function startApi(db: Database) {
-    const app = express();
-    app.use(cors());
-    app.use(express.json());
-
-    app.get('/tasks', async (req: Request, res: Response) => {
-        try {
-            const { status, limit = 50, offset = 0 } = req.query;
-            let query = 'SELECT * FROM tasks';
-            let params: any[] = [];
-
-            if (status) {
-                query += ' WHERE status = ?';
-                params.push(status);
-            }
-
-            query += ' ORDER BY timestamp_ms DESC LIMIT ? OFFSET ?';
-            params.push(limit, offset);
-
-            const tasks = await db.all(query, params);
-            res.json(tasks);
-        } catch (e) {
-            res.status(500).json({ error: (e as Error).message });
-        }
-    });
-
-    app.get('/tasks/:id', async (req: Request, res: Response) => {
-        try {
-            const task = await db.get('SELECT * FROM tasks WHERE task_id = ?', [req.params.id]);
-            if (!task) {
-                return res.status(404).json({ error: 'Task not found' });
-            }
-            res.json(task);
-        } catch (e) {
-            res.status(500).json({ error: (e as Error).message });
-        }
-    });
-
-    app.get('/listings', async (req: Request, res: Response) => {
-        try {
-            const { status = 'ACTIVE' } = req.query;
-            const listings = await db.all('SELECT * FROM listings WHERE status = ? ORDER BY timestamp_ms DESC', [status]);
-            res.json(listings);
-        } catch (e) {
-            res.status(500).json({ error: (e as Error).message });
-        }
-    });
-
-    app.listen(PORT, () => {
-        console.log(`API Server running on port ${PORT}`);
-    });
-}
+const prisma = new PrismaClient();
 
 // Main Indexer Loop
 async function main() {
-    console.log(`Initializing DB...`);
-    const db = await initDb();
-    startApi(db); 
-
     const rpcUrl = getJsonRpcFullnodeUrl(NETWORK as 'testnet' | 'mainnet' | 'devnet' | 'localnet');
     console.log(`Connecting to Sui Network: ${rpcUrl}`);
     
-    // Note: SuiJsonRpcClient needs 'url' and 'network' in options
     const client = new SuiJsonRpcClient({ 
         url: rpcUrl,
         network: NETWORK as 'testnet' | 'mainnet' | 'devnet' | 'localnet' 
@@ -127,8 +28,12 @@ async function main() {
 
     console.log(`Starting Indexer for package: ${PACKAGE_ID} on ${NETWORK}`);
 
-    let cursorRecord = await db.get('SELECT tx_digest, event_seq FROM cursors WHERE id = ?', ['main_cursor']);
-    let nextCursor = cursorRecord ? { txDigest: cursorRecord.tx_digest, eventSeq: cursorRecord.event_seq } : undefined;
+    // Get cursor from DB
+    const cursorRecord = await prisma.cursor.findUnique({
+        where: { id: 'main_cursor' }
+    });
+
+    let nextCursor = cursorRecord ? { txDigest: cursorRecord.tx_digest!, eventSeq: cursorRecord.event_seq! } : undefined;
 
     while (true) {
         try {
@@ -156,56 +61,113 @@ async function main() {
                 console.log(`Processing event: ${eventType} from tx ${txDigest}`);
 
                 if (eventType.includes('::TaskCreated')) {
-                    const existing = await db.get('SELECT id FROM tasks WHERE task_id = ?', [parsedJson.task_id]);
-                    if (!existing) {
-                        await db.run(
-                            `INSERT INTO tasks (task_id, creator, reward_amount, pattern, status, tx_digest, timestamp_ms)
-                             VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                            [parsedJson.task_id, parsedJson.creator, parsedJson.reward_amount, parsedJson.pattern, 'ACTIVE', txDigest, timestampMs]
-                        );
+                    try {
+                        await prisma.task.create({
+                            data: {
+                                task_id: parsedJson.task_id,
+                                creator: parsedJson.creator,
+                                reward_amount: parsedJson.reward_amount,
+                                pattern: parsedJson.pattern,
+                                status: 'ACTIVE',
+                                tx_digest: txDigest,
+                                timestamp_ms: BigInt(timestampMs),
+                            }
+                        });
+                    } catch (e: any) {
+                        if (e.code !== 'P2002') console.error('Error inserting task:', e);
                     }
+
                 } else if (eventType.includes('::TaskCompleted')) {
-                    await db.run(
-                        `UPDATE tasks SET status = ?, tx_digest = ?, timestamp_ms = ? WHERE task_id = ?`,
-                        ['COMPLETED', txDigest, timestampMs, parsedJson.task_id]
-                    );
+                    await prisma.task.update({
+                        where: { task_id: parsedJson.task_id },
+                        data: {
+                            status: 'COMPLETED',
+                            completer: parsedJson.solver, // or parsedJson.completer, checking Move contract would be ideal, but assuming standard name
+                            tx_digest: txDigest,
+                            timestamp_ms: BigInt(timestampMs)
+                        }
+                    });
+
                 } else if (eventType.includes('::TaskCancelled')) {
-                    await db.run(
-                        `UPDATE tasks SET status = ?, tx_digest = ?, timestamp_ms = ? WHERE task_id = ?`,
-                        ['CANCELLED', txDigest, timestampMs, parsedJson.task_id]
-                    );
+                    await prisma.task.update({
+                        where: { task_id: parsedJson.task_id },
+                        data: {
+                            status: 'CANCELLED',
+                            tx_digest: txDigest,
+                            timestamp_ms: BigInt(timestampMs)
+                        }
+                    });
+
                 } else if (eventType.includes('::marketplace::ItemListed')) {
-                    await db.run(
-                        `INSERT INTO listings (listing_id, seller, price, type, status, tx_digest, timestamp_ms)
-                         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-                        [parsedJson.listing_id, parsedJson.seller, parsedJson.price, eventType, 'ACTIVE', txDigest, timestampMs]
-                    );
+                    try {
+                        await prisma.listing.create({
+                            data: {
+                                listing_id: parsedJson.listing_id,
+                                seller: parsedJson.seller,
+                                price: parsedJson.price,
+                                type: eventType,
+                                status: 'ACTIVE',
+                                tx_digest: txDigest,
+                                timestamp_ms: BigInt(timestampMs)
+                            }
+                        });
+                    } catch (e: any) {
+                        if (e.code !== 'P2002') console.error('Error inserting listing:', e);
+                    }
+
                 } else if (eventType.includes('::marketplace::ItemSold')) {
-                    await db.run(
-                         `UPDATE listings SET status = ?, tx_digest = ?, timestamp_ms = ? WHERE listing_id = ?`,
-                         ['SOLD', txDigest, timestampMs, parsedJson.listing_id]
-                    );
+                    await prisma.listing.update({
+                        where: { listing_id: parsedJson.listing_id },
+                        data: {
+                            status: 'SOLD',
+                            buyer: parsedJson.buyer,
+                            price_sold: parsedJson.price,
+                            tx_digest: txDigest,
+                            timestamp_ms: BigInt(timestampMs)
+                        }
+                    });
+
                 } else if (eventType.includes('::marketplace::ItemDelisted')) {
-                    await db.run(
-                         `UPDATE listings SET status = ?, tx_digest = ?, timestamp_ms = ? WHERE listing_id = ?`,
-                         ['DELISTED', txDigest, timestampMs, parsedJson.listing_id]
-                    );
+                    await prisma.listing.update({
+                        where: { listing_id: parsedJson.listing_id },
+                        data: {
+                            status: 'DELISTED',
+                            tx_digest: txDigest,
+                            timestamp_ms: BigInt(timestampMs)
+                        }
+                    });
                 }
             }
 
-            if (events.hasNextPage && events.nextCursor) {
-                const nc = events.nextCursor;
-                nextCursor = nc;
-                await db.run(
-                    `INSERT OR REPLACE INTO cursors (id, tx_digest, event_seq) VALUES (?, ?, ?)`,
-                    ['main_cursor', nc.txDigest, nc.eventSeq]
-                );
+             if (events.hasNextPage && events.nextCursor) {
+                nextCursor = events.nextCursor;
+            } else if (events.data.length > 0) {
+                const lastEvent = events.data[events.data.length - 1];
+                nextCursor = { txDigest: lastEvent.id.txDigest, eventSeq: lastEvent.id.eventSeq };
+            }
+
+            if (nextCursor) {
+                await prisma.cursor.upsert({
+                    where: { id: 'main_cursor' },
+                    update: {
+                        tx_digest: nextCursor.txDigest,
+                        event_seq: nextCursor.eventSeq
+                    },
+                    create: {
+                        id: 'main_cursor',
+                        tx_digest: nextCursor.txDigest,
+                        event_seq: nextCursor.eventSeq
+                    }
+                });
             }
         } catch (e) {
             console.error('Error fetching events:', e);
-            await new Promise(resolve => setTimeout(resolve, 5000));
+            await new Promise(resolve => setTimeout(resolve, 60000));
         }
     }
 }
 
-main().catch(console.error);
+main().catch((e) => {
+    console.error(e);
+    process.exit(1);
+});

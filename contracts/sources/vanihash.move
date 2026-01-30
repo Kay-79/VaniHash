@@ -7,10 +7,7 @@ use sui::balance::{Self, Balance};
 use sui::clock::{Self, Clock};
 use sui::coin::{Self, Coin};
 use sui::event;
-use sui::object::{Self, UID, ID};
 use sui::sui::SUI;
-use sui::transfer;
-use sui::tx_context::{Self, TxContext};
 
 /// Error codes
 const ETaskNotPending: u64 = 1;

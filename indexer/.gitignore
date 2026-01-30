@@ -4,3 +4,5 @@ dist/
 *.db
 *.db-journal
 test.ts
+
+/src/generated/prisma

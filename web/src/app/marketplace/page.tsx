@@ -24,7 +24,7 @@ export default function MarketplacePage() {
     const fetchListings = async () => {
         try {
             setLoading(true);
-            const res = await fetch(`${INDEXER_URL}/listings?status=ACTIVE`);
+            const res = await fetch(`/api/listings?status=ACTIVE`);
             const data = await res.json();
             setListings(data);
         } catch (error) {

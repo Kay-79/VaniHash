@@ -17,12 +17,12 @@ export interface Task {
     creator: string;
     reward_amount: string;
     pattern: string;
-    pattern_type: PatternType;
-    target_type: string;
-    difficulty: number;
-    status: TaskStatus;
-    creation_time: number;
-    grace_period_ms: number;
-    lock_duration_ms: number;
+    pattern_type?: PatternType;
+    target_type?: string;
+    difficulty?: number;
+    status: TaskStatus | string; // Allow string from API
+    creation_time?: number;
+    grace_period_ms?: number;
+    lock_duration_ms?: number;
     timestamp_ms?: number;
 }

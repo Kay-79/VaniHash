@@ -13,33 +13,37 @@ interface TaskCardProps {
 export function TaskCard({ task }: TaskCardProps) {
     const [timeLeft, setTimeLeft] = useState<string>('Calculating...');
 
+    const calculateTime = () => {
+        if (!task.creation_time || !task.lock_duration_ms) return 'Unlimited';
+        const now = Date.now();
+        const expiry = Number(task.creation_time) + Number(task.lock_duration_ms);
+        const diff = expiry - now;
+
+        if (diff <= 0) return 'Expired';
+        
+        const hours = Math.floor(diff / 3600000);
+        const minutes = Math.floor((diff % 3600000) / 60000);
+        
+        if (hours > 0) return `${hours}h ${minutes}m left`;
+        return `${minutes}m left`;
+    };
+
     useEffect(() => {
-        const calculateTime = () => {
-            const now = Date.now();
-            const expiry = Number(task.creation_time) + Number(task.lock_duration_ms);
-            const diff = expiry - now;
-
-            if (diff <= 0) return 'Expired';
-            
-            const hours = Math.floor(diff / 3600000);
-            const minutes = Math.floor((diff % 3600000) / 60000);
-            
-            if (hours > 0) return `${hours}h ${minutes}m left`;
-            return `${minutes}m left`;
-        };
-
         setTimeLeft(calculateTime());
         const timer = setInterval(() => setTimeLeft(calculateTime()), 60000);
         return () => clearInterval(timer);
     }, [task.creation_time, task.lock_duration_ms]);
 
-    const isPending = task.status === TaskStatus.PENDING;
-    const isActive = task.status === TaskStatus.ACTIVE;
-    const isCompleted = task.status === TaskStatus.COMPLETED;
+    // Helper to handle both Enum and String status
+    const statusStr = String(task.status).toUpperCase();
+    const isPending = statusStr === 'PENDING' || task.status === TaskStatus.PENDING;
+    const isActive = statusStr === 'ACTIVE' || task.status === TaskStatus.ACTIVE;
+    const isCompleted = statusStr === 'COMPLETED' || task.status === TaskStatus.COMPLETED;
     const isAvailable = isPending || isActive;
 
     const renderPattern = () => {
-        const p = task.pattern;
+        const p = task.pattern || '';
+        // Handle pattern_type safely if it's undefined
         if (task.pattern_type === PatternType.PREFIX) return `0x${p}...`;
         if (task.pattern_type === PatternType.SUFFIX) return `0x...${p}`;
         if (task.pattern_type === PatternType.CONTAINS) return `...${p}...`;
@@ -47,13 +51,11 @@ export function TaskCard({ task }: TaskCardProps) {
     };
 
     const getStatusLabel = () => {
-        switch(task.status) {
-            case TaskStatus.PENDING: return 'PENDING';
-            case TaskStatus.ACTIVE: return 'ACTIVE';
-            case TaskStatus.COMPLETED: return 'COMPLETED';
-            case TaskStatus.CANCELLED: return 'CANCELLED';
-            default: return 'UNKNOWN';
-        }
+        if (isPending) return 'PENDING';
+        if (isActive) return 'ACTIVE';
+        if (isCompleted) return 'COMPLETED';
+        if (statusStr === 'CANCELLED' || task.status === TaskStatus.CANCELLED) return 'CANCELLED';
+        return statusStr || 'UNKNOWN';
     };
 
     return (
@@ -93,13 +95,13 @@ export function TaskCard({ task }: TaskCardProps) {
                             <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Target Type</p>
                             <div className="flex items-center gap-1.5 text-sm text-gray-300 bg-gray-800/50 px-2 py-1 rounded">
                                 <ShieldCheck className="h-3.5 w-3.5 text-blue-400" />
-                                {task.target_type.split('::').pop()}
+                                {task?.target_type?.split('::').pop() ?? 'Unknown'}
                             </div>
                         </div>
                          <div className="text-right">
                              <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Reward</p>
                             <p className="text-lg font-bold text-white flex items-center justify-end gap-1">
-                                {mistToSui(task.reward_amount)} 
+                                {task.reward_amount ? mistToSui(task.reward_amount) : '0'} 
                                 <span className="text-sm text-yellow-500 font-normal">SUI</span>
                             </p>
                         </div>
