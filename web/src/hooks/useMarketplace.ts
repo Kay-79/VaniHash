@@ -12,11 +12,24 @@ export function useMarketplace() {
         itemId: string,
         itemType: string,
         priceMist: string | number,
+        shouldPlace: boolean = false,
         onSuccess?: (result: any) => void,
         onError?: (error: any) => void
     ) => {
         if (!account) throw new Error("Wallet not connected");
         const tx = new Transaction();
+
+        if (shouldPlace) {
+            tx.moveCall({
+                target: '0x2::kiosk::place',
+                typeArguments: [itemType],
+                arguments: [
+                    tx.object(kioskId),
+                    tx.object(kioskCapId),
+                    tx.object(itemId),
+                ],
+            });
+        }
 
         tx.moveCall({
             target: `${MARKETPLACE_PACKAGE_ID}::market::list`,
@@ -24,7 +37,7 @@ export function useMarketplace() {
             arguments: [
                 tx.object(kioskId),
                 tx.object(kioskCapId),
-                tx.object(itemId),
+                tx.pure.id(itemId),
                 tx.pure.u64(priceMist),
             ],
         });
@@ -62,7 +75,7 @@ export function useMarketplace() {
             typeArguments: [itemType],
             arguments: [
                 tx.object(kioskId),
-                tx.object(itemId),
+                tx.pure.id(itemId), // Item ID (Pure)
                 tx.pure.u64(priceMist), // The List Price
                 payment,
                 tx.object(TRANSFER_POLICY_ID), // Needed for confirmation
@@ -89,12 +102,29 @@ export function useMarketplace() {
             arguments: [
                 tx.object(kioskId),
                 tx.object(kioskCapId),
-                tx.object(itemId),
+                tx.pure.id(itemId),
             ],
         });
 
         signAndExecute({ transaction: tx }, { onSuccess, onError });
     };
 
-    return { list, buy, delist, isPending, isConnected: !!account };
+    // Kiosk Creation
+    const createKiosk = (onSuccess?: (result: any) => void, onError?: (error: any) => void) => {
+        if (!account) throw new Error("Wallet not connected");
+        const tx = new Transaction();
+        const [kiosk, kioskCap] = tx.moveCall({
+            target: '0x2::kiosk::new',
+        });
+        tx.transferObjects([kioskCap], tx.pure.address(account.address));
+        tx.moveCall({
+            target: '0x2::transfer::public_share_object',
+            typeArguments: ['0x2::kiosk::Kiosk'],
+            arguments: [kiosk],
+        });
+
+        signAndExecute({ transaction: tx }, { onSuccess, onError });
+    };
+
+    return { list, buy, delist, createKiosk, isPending, isConnected: !!account };
 }

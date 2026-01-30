@@ -1,173 +1,93 @@
-import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
-import { PrismaClient } from '@prisma/client';
-import dotenv from 'dotenv';
-import path from 'path';
-import { fileURLToPath } from 'url';
 
-dotenv.config();
+import { SuiService } from './services/sui.service';
+import { DbService } from './services/db.service';
+import { EventParser } from './parsers/event.parser';
+import { CONFIG } from './config';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Configuration
-const PACKAGE_ID = process.env.VANIHASH_PACKAGE_ID || '0xa4f12914ac23fdd5f926be69a1392714fdd192a3e457b8665e3e78210db3171d';
-const MODULE_NAME = 'vanihash';
-const NETWORK = process.env.SUI_NETWORK || 'testnet';
-
-const prisma = new PrismaClient();
-
-// Main Indexer Loop
 async function main() {
-    const rpcUrl = getJsonRpcFullnodeUrl(NETWORK as 'testnet' | 'mainnet' | 'devnet' | 'localnet');
-    console.log(`Connecting to Sui Network: ${rpcUrl}`);
-    
-    const client = new SuiJsonRpcClient({ 
-        url: rpcUrl,
-        network: NETWORK as 'testnet' | 'mainnet' | 'devnet' | 'localnet' 
-    });
+    const suiService = new SuiService();
+    const dbService = new DbService();
+    const eventParser = new EventParser(dbService);
 
-    console.log(`Starting Indexer for package: ${PACKAGE_ID} on ${NETWORK}`);
+    console.log(`Starting Indexer Service...`);
+    console.log(`VaniHash Package: ${CONFIG.VANIHASH_PACKAGE_ID}`);
+    if (CONFIG.MARKETPLACE_PACKAGE_ID) {
+        console.log(`Marketplace Package: ${CONFIG.MARKETPLACE_PACKAGE_ID}`);
+    } else {
+        console.warn('MARKETPLACE_PACKAGE_ID is not set in config/env. Marketplace events will be skipped until set.');
+    }
 
-    // Get cursor from DB
-    const cursorRecord = await prisma.cursor.findUnique({
-        where: { id: 'main_cursor' }
-    });
-
-    let nextCursor = cursorRecord ? { txDigest: cursorRecord.tx_digest!, eventSeq: cursorRecord.event_seq! } : undefined;
+    // Initialize cursor
+    let nextCursor = await dbService.getCursor('main_cursor')
+        .then(c => c ? { txDigest: c.tx_digest!, eventSeq: c.event_seq! } : undefined);
 
     while (true) {
         try {
-            // Poll for events
-            const events = await client.queryEvents({
-                query: { MoveModule: { package: PACKAGE_ID, module: MODULE_NAME } },
-                cursor: nextCursor,
-                limit: 50,
-                order: 'ascending'
-            });
+            // We need to query for both packages if they exist.
+            // Sui API allows querying by module. We can't query multiple packages in one call efficiently unless we use separate queries or a more complex query if supported.
+            // For simplicity, let's query VaniHash first. 
+            // Better approach: If we want strict ordering, we might need to query them separately and merge, or just sequential.
+            // Given the volume, sequential polling is fine.
 
-            if (events.data.length === 0) {
-                await new Promise(resolve => setTimeout(resolve, 3000));
-                continue;
+            // 1. Poll VaniHash Events
+            const vaniHashEvents = await suiService.queryEvents(
+                CONFIG.VANIHASH_PACKAGE_ID,
+                CONFIG.MODULE_VANIHASH,
+                nextCursor
+            );
+
+            // Process VaniHash Events
+            for (const event of vaniHashEvents.data) {
+                await eventParser.parse(event);
             }
 
-            console.log(`Fetched ${events.data.length} new events.`);
+            // Update Cursor based on VaniHash Events
+            if (vaniHashEvents.hasNextPage && vaniHashEvents.nextCursor) {
+                nextCursor = vaniHashEvents.nextCursor;
+                await dbService.saveCursor('main_cursor', nextCursor!.txDigest, nextCursor!.eventSeq);
+            } else if (vaniHashEvents.data.length > 0) {
+                const lastEvent = vaniHashEvents.data[vaniHashEvents.data.length - 1];
+                nextCursor = { txDigest: lastEvent.id.txDigest, eventSeq: lastEvent.id.eventSeq };
+                await dbService.saveCursor('main_cursor', nextCursor!.txDigest, nextCursor!.eventSeq);
+            }
 
-            for (const event of events.data) {
-                const eventType = event.type;
-                const parsedJson = event.parsedJson as any;
-                const txDigest = event.id.txDigest;
-                const timestampMs = Number(event.timestampMs);
+            // 2. Poll Marketplace Events (Use a separate cursor? Or share if on same sequence? Sui cursors are specific to the query.)
+            // IMPORTANT: If we query different packages, we CANNOT use the same cursor object, as the cursor is tied to the result set of the specific query.
+            // We need a separate cursor for Marketplace.
 
-                console.log(`Processing event: ${eventType} from tx ${txDigest}`);
+            if (CONFIG.MARKETPLACE_PACKAGE_ID) {
+                let marketCursor = await dbService.getCursor('market_cursor')
+                    .then(c => c ? { txDigest: c.tx_digest!, eventSeq: c.event_seq! } : undefined);
 
-                if (eventType.includes('::TaskCreated')) {
-                    try {
-                        await prisma.task.create({
-                            data: {
-                                task_id: parsedJson.task_id,
-                                creator: parsedJson.creator,
-                                reward_amount: parsedJson.reward_amount,
-                                pattern: parsedJson.pattern,
-                                status: 'ACTIVE',
-                                tx_digest: txDigest,
-                                timestamp_ms: BigInt(timestampMs),
-                            }
-                        });
-                    } catch (e: any) {
-                        if (e.code !== 'P2002') console.error('Error inserting task:', e);
-                    }
+                const marketEvents = await suiService.queryEvents(
+                    CONFIG.MARKETPLACE_PACKAGE_ID,
+                    CONFIG.MODULE_MARKET,
+                    marketCursor
+                );
 
-                } else if (eventType.includes('::TaskCompleted')) {
-                    await prisma.task.update({
-                        where: { task_id: parsedJson.task_id },
-                        data: {
-                            status: 'COMPLETED',
-                            completer: parsedJson.solver, // or parsedJson.completer, checking Move contract would be ideal, but assuming standard name
-                            tx_digest: txDigest,
-                            timestamp_ms: BigInt(timestampMs)
-                        }
-                    });
+                for (const event of marketEvents.data) {
+                    await eventParser.parse(event);
+                }
 
-                } else if (eventType.includes('::TaskCancelled')) {
-                    await prisma.task.update({
-                        where: { task_id: parsedJson.task_id },
-                        data: {
-                            status: 'CANCELLED',
-                            tx_digest: txDigest,
-                            timestamp_ms: BigInt(timestampMs)
-                        }
-                    });
-
-                } else if (eventType.includes('::marketplace::ItemListed')) {
-                    try {
-                        await prisma.listing.create({
-                            data: {
-                                listing_id: parsedJson.listing_id,
-                                seller: parsedJson.seller,
-                                price: parsedJson.price,
-                                type: eventType,
-                                status: 'ACTIVE',
-                                tx_digest: txDigest,
-                                timestamp_ms: BigInt(timestampMs)
-                            }
-                        });
-                    } catch (e: any) {
-                        if (e.code !== 'P2002') console.error('Error inserting listing:', e);
-                    }
-
-                } else if (eventType.includes('::marketplace::ItemSold')) {
-                    await prisma.listing.update({
-                        where: { listing_id: parsedJson.listing_id },
-                        data: {
-                            status: 'SOLD',
-                            buyer: parsedJson.buyer,
-                            price_sold: parsedJson.price,
-                            tx_digest: txDigest,
-                            timestamp_ms: BigInt(timestampMs)
-                        }
-                    });
-
-                } else if (eventType.includes('::marketplace::ItemDelisted')) {
-                    await prisma.listing.update({
-                        where: { listing_id: parsedJson.listing_id },
-                        data: {
-                            status: 'DELISTED',
-                            tx_digest: txDigest,
-                            timestamp_ms: BigInt(timestampMs)
-                        }
-                    });
+                if (marketEvents.hasNextPage && marketEvents.nextCursor) {
+                    marketCursor = marketEvents.nextCursor;
+                    await dbService.saveCursor('market_cursor', marketCursor!.txDigest, marketCursor!.eventSeq);
+                } else if (marketEvents.data.length > 0) {
+                    const lastEvent = marketEvents.data[marketEvents.data.length - 1];
+                    marketCursor = { txDigest: lastEvent.id.txDigest, eventSeq: lastEvent.id.eventSeq };
+                    await dbService.saveCursor('market_cursor', marketCursor!.txDigest, marketCursor!.eventSeq);
                 }
             }
 
-             if (events.hasNextPage && events.nextCursor) {
-                nextCursor = events.nextCursor;
-            } else if (events.data.length > 0) {
-                const lastEvent = events.data[events.data.length - 1];
-                nextCursor = { txDigest: lastEvent.id.txDigest, eventSeq: lastEvent.id.eventSeq };
+            if (vaniHashEvents.data.length === 0) {
+                await new Promise(resolve => setTimeout(resolve, CONFIG.POLL_INTERVAL_MS));
             }
 
-            if (nextCursor) {
-                await prisma.cursor.upsert({
-                    where: { id: 'main_cursor' },
-                    update: {
-                        tx_digest: nextCursor.txDigest,
-                        event_seq: nextCursor.eventSeq
-                    },
-                    create: {
-                        id: 'main_cursor',
-                        tx_digest: nextCursor.txDigest,
-                        event_seq: nextCursor.eventSeq
-                    }
-                });
-            }
         } catch (e) {
-            console.error('Error fetching events:', e);
-            await new Promise(resolve => setTimeout(resolve, 60000));
+            console.error('Error in Indexer Loop:', e);
+            await new Promise(resolve => setTimeout(resolve, CONFIG.ERROR_RETRY_MS));
         }
     }
 }
 
-main().catch((e) => {
-    console.error(e);
-    process.exit(1);
-});
+main().catch(console.error);

@@ -7,6 +7,9 @@ import { useMarketplace } from "@/hooks/useMarketplace";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
+import { useOwnedKiosk } from "@/hooks/useOwnedKiosk";
+import { normalizeSuiAddress } from "@mysten/sui/utils";
+
 interface Listing {
     listing_id: string;
     seller: string;
@@ -22,7 +25,8 @@ interface ListingTableProps {
 }
 
 export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
-    const { buy, buyBatch, isPending } = useMarketplace();
+    const { buy, buyBatch, delist, isPending } = useMarketplace();
+    const { kioskId, kioskCapId } = useOwnedKiosk();
     const router = useRouter();
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -49,7 +53,7 @@ export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
                     priceMist: l.price
                 };
             });
-        
+
         if (itemsToBuy.length === 0) return;
 
         buyBatch(
@@ -111,19 +115,19 @@ export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
                         {listings.map((listing) => {
                             const isSelected = selectedIds.has(listing.listing_id);
                             return (
-                                <tr 
-                                    key={listing.listing_id} 
+                                <tr
+                                    key={listing.listing_id}
                                     className={`
                                         transition-colors cursor-pointer group 
                                         ${isSelected ? 'bg-yellow-500/10 hover:bg-yellow-500/20' : 'bg-black/20 hover:bg-gray-800/30'}
                                     `}
-                                    onClick={(e) => toggleSelection(e, listing.listing_id)}
+                                    onClick={() => router.push(`/item/${listing.listing_id}`)}
                                 >
                                     <td className="px-4 py-3">
-                                        <div 
-                                            className={`h-4 w-4 rounded border flex items-center justify-center transition-colors ${
-                                                isSelected ? 'bg-yellow-500 border-yellow-500' : 'border-gray-600 group-hover:border-gray-400'
-                                            }`}
+                                        <div
+                                            className={`h-4 w-4 rounded border flex items-center justify-center transition-colors cursor-pointer ${isSelected ? 'bg-yellow-500 border-yellow-500' : 'border-gray-600 group-hover:border-gray-400'
+                                                }`}
+                                            onClick={(e) => toggleSelection(e, listing.listing_id)}
                                         >
                                             {isSelected && <CheckSquare className="h-3 w-3 text-black" />}
                                         </div>
@@ -139,8 +143,8 @@ export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
                                                 </div>
                                                 <div className="text-xs text-gray-500 font-mono flex items-center gap-1 group/id">
                                                     #{listing.listing_id.slice(0, 6)}
-                                                    <Copy 
-                                                        className="h-3 w-3 opacity-0 group-hover/id:opacity-100 cursor-pointer hover:text-white transition-all" 
+                                                    <Copy
+                                                        className="h-3 w-3 opacity-0 group-hover/id:opacity-100 cursor-pointer hover:text-white transition-all"
                                                         onClick={(e) => copyId(e, listing.listing_id)}
                                                     />
                                                 </div>
@@ -151,7 +155,7 @@ export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
                                         {mistToSui(listing.price)} SUI
                                     </td>
                                     <td className="px-4 py-3 text-right">
-                                        <span className="text-gray-500">-</span> 
+                                        <span className="text-gray-500">-</span>
                                     </td>
                                     <td className="px-4 py-3 text-right">
                                         <span className="text-yellow-500 hover:text-yellow-400 cursor-pointer font-mono text-xs">
@@ -160,25 +164,53 @@ export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
                                     </td>
                                     <td className="px-4 py-3 text-right">
                                         <div className="flex items-center justify-end gap-2">
-                                            <Button 
-                                                size="sm" 
-                                                variant="secondary"
-                                                className="h-8 border border-gray-700 bg-transparent hover:bg-gray-800 text-gray-300"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    toast.info("Bidding not yet available");
-                                                }}
-                                            >
-                                                Bid
-                                            </Button>
-                                            <Button 
-                                                size="sm" 
-                                                className="h-8 bg-yellow-600 hover:bg-yellow-500 text-white border-none font-semibold px-4"
-                                                onClick={(e) => handleBuy(e, listing)}
-                                                disabled={isPending}
-                                            >
-                                                {isPending ? '...' : 'Buy'}
-                                            </Button>
+                                            {listing.seller === kioskId ? (
+                                                <Button
+                                                    size="sm"
+                                                    variant="destructive"
+                                                    className="h-8 border border-red-900 bg-red-900/20 hover:bg-red-900/40 text-red-400"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        // Parse type
+                                                        const match = listing.type.match(/<(.+)>/);
+                                                        const itemType = match ? match[1] : listing.type;
+
+                                                        delist(
+                                                            kioskId,
+                                                            kioskCapId!,
+                                                            listing.listing_id,
+                                                            itemType,
+                                                            () => toast.success("Item delisted successfully"),
+                                                            (err) => toast.error("Delist failed: " + err.message)
+                                                        );
+                                                    }}
+                                                    disabled={isPending}
+                                                >
+                                                    {isPending ? '...' : 'Delist'}
+                                                </Button>
+                                            ) : (
+                                                <>
+                                                    <Button
+                                                        size="sm"
+                                                        variant="secondary"
+                                                        className="h-8 border border-gray-700 bg-transparent hover:bg-gray-800 text-gray-300"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            toast.info("Bidding not yet available");
+                                                        }}
+                                                    >
+                                                        Bid
+                                                    </Button>
+                                                    <Button
+                                                        size="sm"
+                                                        className="h-8 bg-yellow-600 hover:bg-yellow-500 text-white border-none font-semibold px-4"
+                                                        onClick={(e) => handleBuy(e, listing)}
+                                                        disabled={isPending}
+                                                    >
+                                                        {isPending ? '...' : 'Buy'}
+                                                    </Button>
+                                                </>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
@@ -195,16 +227,16 @@ export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
                         <CheckSquare className="h-4 w-4 text-yellow-500" />
                         {selectedIds.size} Selected
                     </div>
-                    
-                    <Button 
+
+                    <Button
                         onClick={handleBatchBuy}
                         disabled={isPending}
                         className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold h-9"
                     >
                         Buy {selectedIds.size} Items
                     </Button>
-                    
-                    <Button 
+
+                    <Button
                         variant="outline"
                         className="border-gray-700 hover:bg-gray-800 text-gray-300 h-9"
                         onClick={() => toast.info("Batch bidding coming soon")}
@@ -212,7 +244,7 @@ export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
                         Bid on {selectedIds.size}
                     </Button>
 
-                     <Button 
+                    <Button
                         variant="ghost"
                         size="sm"
                         className="text-gray-500 hover:text-white h-9 w-9 p-0 rounded-full"

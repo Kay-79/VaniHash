@@ -62,10 +62,7 @@ export default function MarketplacePage() {
                         Live
                     </span>
                     <div className="ml-4">
-                        <ListingModal
-                            kioskId="0xKIOSK_ID" // Placeholder
-                            kioskCapId="0xKIOSK_CAP_ID" // Placeholder
-                        />
+                        <ListingModal />
                     </div>
                 </div>
 
