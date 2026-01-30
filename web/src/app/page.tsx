@@ -10,7 +10,7 @@ export default function Home() {
   const { tasks, loading, refetch } = useFetchTasks();
 
   return (
-    <DashboardLayout>
+    <DashboardLayout activityMode="tasks">
       <div className="p-6 space-y-6">
         {/* Create Task Section */}
         <Card className="bg-gray-900/50 border-gray-800">

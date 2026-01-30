@@ -7,12 +7,14 @@ interface DashboardLayoutProps {
     children: ReactNode;
     showSidebar?: boolean;
     showActivity?: boolean;
+    activityMode?: 'market' | 'tasks';
 }
 
 export function DashboardLayout({ 
     children, 
     showSidebar = true, 
-    showActivity = true 
+    showActivity = true,
+    activityMode = 'market'
 }: DashboardLayoutProps) {
     return (
         <div className="min-h-screen bg-black text-gray-200 font-sans flex flex-col">
@@ -28,7 +30,7 @@ export function DashboardLayout({
                 </main>
 
                 {/* Right Activity Feed */}
-                {showActivity && <ActivityFeed />}
+                {showActivity && <ActivityFeed mode={activityMode} />}
             </div>
         </div>
     );

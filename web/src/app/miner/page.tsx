@@ -7,7 +7,7 @@ import { Activity, Pickaxe, Coins, Server } from 'lucide-react';
 
 export default function MinerPage() {
     return (
-        <DashboardLayout>
+        <DashboardLayout activityMode="tasks">
             <div className="p-8 space-y-8">
                 <h1 className="text-3xl font-bold text-white flex items-center gap-3">
                     <Server className="h-8 w-8 text-green-500" />

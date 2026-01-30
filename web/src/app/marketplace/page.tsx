@@ -41,7 +41,7 @@ export default function MarketplacePage() {
     }, []);
 
     return (
-        <DashboardLayout>
+        <DashboardLayout activityMode="market">
             {/* Toolbar */}
             <div className="flex items-center justify-between p-4 border-b border-gray-800 sticky top-0 bg-black/90 backdrop-blur z-10">
                 <div className="flex items-center gap-4">
