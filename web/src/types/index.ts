@@ -25,4 +25,38 @@ export interface Task {
     grace_period_ms?: number;
     lock_duration_ms?: number;
     timestamp_ms?: number;
+    completer?: string;
+    created_at?: string;
+
+    // Blockchain Identifiers
+    gas_object?: string;
+    package_id?: string;
+    nft_id?: string;
+
+    // Attributes for filtering
+    attributes?: {
+        pattern_type?: string; // 'Numeric', 'Alphanumeric'
+        length?: number;
+        difficulty?: number;
+    };
+}
+
+export interface Listing {
+    listing_id: string;
+    seller: string;
+    price: string;
+    type: string; // Struct tag e.g. 0x...::miner::GasObject
+    status: string;
+    timestamp_ms: number;
+    
+    // Enriched Data
+    metadata?: {
+        name?: string;
+        description?: string;
+        image_url?: string;
+        attributes?: {
+            trait_type: string;
+            value: string | number;
+        }[];
+    };
 }

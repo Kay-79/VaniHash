@@ -72,5 +72,30 @@ export function useMarketplace() {
         signAndExecute({ transaction: tx }, { onSuccess, onError });
     };
 
-    return { list, buy, delist, isPending, isConnected: !!account };
+    const buyBatch = (
+        items: { listingId: string; itemType: string; priceMist: string | number }[],
+        onSuccess?: (result: any) => void,
+        onError?: (error: any) => void
+    ) => {
+        if (!account) throw new Error("Wallet not connected");
+        if (items.length === 0) return;
+
+        const tx = new Transaction();
+        
+        items.forEach((item) => {
+            const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(item.priceMist)]);
+            tx.moveCall({
+                target: `${PACKAGE_ID}::marketplace::buy`,
+                typeArguments: [item.itemType],
+                arguments: [
+                    tx.object(item.listingId),
+                    coin,
+                ],
+            });
+        });
+
+        signAndExecute({ transaction: tx }, { onSuccess, onError });
+    };
+
+    return { list, buy, buyBatch, delist, isPending, isConnected: !!account };
 }

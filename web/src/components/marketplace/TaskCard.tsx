@@ -5,6 +5,7 @@ import { Badge } from '@/components/ui/Badge';
 import { SubmitProofDialog } from './SubmitProofDialog';
 import { Clock, ShieldCheck, Target } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 
 interface TaskCardProps {
     task: Task;
@@ -59,9 +60,10 @@ export function TaskCard({ task }: TaskCardProps) {
     };
 
     return (
-        <Card className="bg-gray-900 border-gray-800 hover:border-yellow-500/50 transition-all duration-300 group overflow-hidden relative">
-            {/* Status Badge */}
-            <div className="absolute top-3 right-3 z-10">
+        <Link href={`/task/${task.task_id}`} className="block h-full w-full">
+            <Card className="h-full flex flex-col bg-gray-900 border-gray-800 hover:border-yellow-500/50 transition-all duration-300 group overflow-hidden relative cursor-pointer">
+                {/* Status Badge */}
+                <div className="absolute top-3 right-3 z-10">
                 <Badge variant={isAvailable ? "default" : "secondary"} className={
                     isAvailable 
                     ? "bg-green-500/10 text-green-400 border-green-500/20" 
@@ -73,7 +75,7 @@ export function TaskCard({ task }: TaskCardProps) {
                 </Badge>
             </div>
 
-            <CardContent className="p-0">
+            <CardContent className="p-0 flex-1 flex flex-col">
                 {/* Pattern Visual */}
                 <div className="h-32 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center relative group-hover:from-gray-800 group-hover:to-gray-800/80 transition-all">
                     <div className="text-center z-10">
@@ -89,7 +91,7 @@ export function TaskCard({ task }: TaskCardProps) {
                 </div>
 
                 {/* Details */}
-                <div className="p-4 space-y-3">
+                <div className="p-4 space-y-3 flex-1">
                     <div className="flex justify-between items-start">
                         <div>
                             <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-1">Target Type</p>
@@ -109,7 +111,7 @@ export function TaskCard({ task }: TaskCardProps) {
                 </div>
             </CardContent>
 
-             <CardFooter className="p-4 pt-0 flex items-center justify-between border-t border-gray-800/50 mt-2 bg-black/20">
+             <CardFooter className="p-4 pt-0 flex items-center justify-between border-t border-gray-800/50 mt-auto bg-black/20">
                  <div className="flex items-center gap-2 text-xs text-gray-500">
                     <Clock className="h-3.5 w-3.5" />
                     <span>{timeLeft}</span>
@@ -123,6 +125,7 @@ export function TaskCard({ task }: TaskCardProps) {
                     <span className="text-xs text-gray-600 italic">Task ended</span>
                  )}
             </CardFooter>
-        </Card>
+            </Card>
+        </Link>
     );
 }

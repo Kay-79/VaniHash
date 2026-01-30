@@ -48,12 +48,6 @@ export function GlobalHeader() {
                         Tasks
                     </Link>
                     <Link 
-                        href="/miner" 
-                        className={cn("transition-colors hover:text-white", isActive('/miner') ? "text-yellow-500 font-bold" : "")}
-                    >
-                        Miner
-                    </Link>
-                    <Link 
                         href="/marketplace" 
                         className={cn("transition-colors hover:text-white", isActive('/marketplace') ? "text-yellow-500 font-bold" : "")}
                     >

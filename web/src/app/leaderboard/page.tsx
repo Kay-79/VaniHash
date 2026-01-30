@@ -3,7 +3,8 @@
 import { useState } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Trophy, Medal, Zap, Diamond, DollarSign } from 'lucide-react';
+import { Trophy, Medal, Zap, Diamond, DollarSign, Coins, Pickaxe, Crown } from 'lucide-react';
+import Link from 'next/link';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 
@@ -121,19 +122,19 @@ export default function LeaderboardPage() {
                                                 )}
                                             </td>
                                             <td className="px-6 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`h-8 w-8 rounded-full bg-gradient-to-tr ${
-                                                        item.rank === 1 ? 'from-yellow-500 to-orange-500' : 'from-gray-700 to-gray-600'
-                                                    }`} />
-                                                    <span className="font-mono text-gray-300 group-hover:text-white transition-colors">
-                                                        {item.address}
-                                                    </span>
-                                                    {item.rank <= 3 && (
-                                                        <Badge variant="secondary" className="bg-blue-500/10 text-blue-400 border-blue-500/20 py-0 text-[10px]">
-                                                            PRO
-                                                        </Badge>
-                                                    )}
+                                                <div className="flex items-center">
+                                                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xs font-bold text-white mr-3">
+                                                        {item.rank}
+                                                    </div>
+                                                    <Link href={`/address/${item.address}`} className="text-blue-400 hover:text-blue-300 transition-colors font-mono">
+                                                        {item.address.slice(0, 6)}...{item.address.slice(-4)}
+                                                    </Link>
                                                 </div>
+                                                {item.rank <= 3 && (
+                                                    <Badge variant="secondary" className="bg-blue-500/10 text-blue-400 border-blue-500/20 py-0 text-[10px] ml-11 mt-1">
+                                                        PRO
+                                                    </Badge>
+                                                )}
                                             </td>
                                             {activeTab === 'miners' && (
                                                 <>

@@ -6,14 +6,30 @@ import { CreateTaskForm } from '@/components/marketplace/CreateTaskForm';
 import { TaskList } from '@/components/marketplace/TaskList';
 import { useFetchTasks } from '@/hooks/useFetchTasks';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
-import { LayoutGrid, List, ArrowUpDown } from 'lucide-react';
+import { LayoutGrid, List, ArrowUpDown, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { Select } from '@/components/ui/Select'; 
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { MinerStats } from '@/components/miner/MinerStats';
 
 export default function Home() {
   const { tasks, loading, refetch } = useFetchTasks();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [sortBy, setSortBy] = useState<'time' | 'reward'>('time');
+  
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const statusFilter = searchParams.get('status') || 'ALL';
+
+  const handleStatusChange = (newStatus: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (newStatus && newStatus !== 'ALL') {
+          params.set('status', newStatus);
+      } else {
+          params.delete('status');
+      }
+      router.replace(`${pathname}?${params.toString()}`);
+  };
 
   // Sorting Logic
   const sortedTasks = [...tasks].sort((a, b) => {
@@ -29,6 +45,9 @@ export default function Home() {
   return (
     <DashboardLayout activityMode="tasks">
       <div className="p-6 space-y-6">
+        {/* Miner Stats Section */}
+        <MinerStats />
+
         {/* Create Task Section */}
         <CreateTaskForm onTaskCreated={() => {
             setTimeout(refetch, 2000);
@@ -40,6 +59,22 @@ export default function Home() {
                 <h2 className="text-xl font-bold text-white">Active Job Requests</h2>
                 
                 <div className="flex items-center gap-3">
+                    {/* Status Filter */}
+                    <div className="flex items-center gap-2 bg-gray-900/50 p-1 rounded-lg border border-gray-800">
+                        <Filter className="h-4 w-4 text-gray-500 ml-2" />
+                        <select 
+                            value={statusFilter}
+                            onChange={(e) => handleStatusChange(e.target.value)}
+                            className="bg-transparent text-sm text-gray-300 border-none focus:ring-0 cursor-pointer pr-4 uppercase"
+                        >
+                            <option value="ALL">All Status</option>
+                            <option value="PENDING">Pending</option>
+                            <option value="ACTIVE">Active</option>
+                            <option value="COMPLETED">Completed</option>
+                            <option value="CANCELLED">Cancelled</option>
+                        </select>
+                    </div>
+
                     {/* Sort Control */}
                     <div className="flex items-center gap-2 bg-gray-900/50 p-1 rounded-lg border border-gray-800">
                         <ArrowUpDown className="h-4 w-4 text-gray-500 ml-2" />

@@ -5,6 +5,7 @@ import { Task } from '@/types';
 export function useFetchTasks() {
     const searchParams = useSearchParams();
     const search = searchParams.get('search');
+    const status = searchParams.get('status');
 
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(false);
@@ -15,6 +16,7 @@ export function useFetchTasks() {
         try {
             const query = new URLSearchParams({ limit: '20' });
             if (search) query.set('search', search);
+            if (status && status !== 'ALL') query.set('status', status);
 
             const res = await fetch(`/api/tasks?${query.toString()}`);
             const data = await res.json() as Task[];
@@ -26,7 +28,7 @@ export function useFetchTasks() {
         } finally {
             setLoading(false);
         }
-    }, [search]);
+    }, [search, status]);
 
     useEffect(() => {
         fetchTasks();
