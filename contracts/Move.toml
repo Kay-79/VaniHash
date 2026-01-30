@@ -1,0 +1,11 @@
+[package]
+name = "vanihash"
+version = "0.0.1"
+published-at = "0x0"
+edition = "2024.beta"
+
+[dependencies]
+Sui = { local = "vendor/sui/crates/sui-framework/packages/sui-framework" }
+
+[addresses]
+vanihash = "0x0"
