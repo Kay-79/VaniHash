@@ -23,11 +23,11 @@ export function PatternInput({ label, onValidChange, className, ...props }: Patt
 
     return (
         <div className={className}>
-            <Label className="mb-2 block">{label}</Label>
+            <Label className="mb-2 block text-gray-400">{label}</Label>
             <Input 
                 {...props}
                 onChange={handleChange}
-                className={error ? 'border-red-500' : ''}
+                className={`bg-black/40 border-gray-800 text-white placeholder:text-gray-600 focus:ring-blue-500/50 ${error ? 'border-red-500' : ''}`}
             />
             {error && <p className="text-red-500 text-xs mt-1">{error}</p>}
         </div>

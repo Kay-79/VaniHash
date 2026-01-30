@@ -6,14 +6,15 @@ import { Zap } from 'lucide-react';
 interface TaskListProps {
     tasks: Task[];
     loading?: boolean;
+    viewMode?: 'grid' | 'list';
 }
 
-export function TaskList({ tasks, loading }: TaskListProps) {
+export function TaskList({ tasks, loading, viewMode = 'grid' }: TaskListProps) {
     if (loading) {
         return (
-            <div className="space-y-4">
-                {[1, 2, 3].map((i) => (
-                    <div key={i} className="flex items-center space-x-4 p-4 border border-gray-700 rounded-lg">
+            <div className={`gap-4 py-4 ${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'flex flex-col'}`}>
+                {[1, 2, 3, 4].map((i) => (
+                    <div key={i} className="flex items-center space-x-4 p-4 border border-gray-700 rounded-lg bg-gray-900/40">
                         <div className="space-y-2 w-full">
                             <Skeleton className="h-4 w-[250px]" />
                             <Skeleton className="h-4 w-[200px]" />
@@ -38,7 +39,11 @@ export function TaskList({ tasks, loading }: TaskListProps) {
     }
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-1">
+        <div className={
+            viewMode === 'grid' 
+            ? "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 p-1" 
+            : "flex flex-col gap-3 p-1"
+        }>
             {tasks.map((task) => (
                 <TaskCard key={task.id} task={task} />
             ))}

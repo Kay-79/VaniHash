@@ -44,9 +44,9 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
     };
 
     return (
-        <Card className="w-full">
+        <Card className="w-full bg-gray-900/50 border-gray-800 backdrop-blur-sm">
             <CardHeader>
-                <CardTitle>Hire a Miner</CardTitle>
+                <CardTitle className="text-xl text-white">Create New Task</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
                 <div>
@@ -57,37 +57,38 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
                         value={pattern}
                         onValidChange={(val) => setPattern(val)}
                         className="mt-1"
+                        style={{ color: 'white' }}
                     />
                 </div>
 
                 <div>
-                    <Label htmlFor="type">Pattern Type</Label>
+                    <Label htmlFor="type" className="text-gray-400">Pattern Type</Label>
                     <Select 
                         id="type"
                         value={patternType}
                         onChange={(e) => setPatternType(e.target.value)}
-                        className="mt-1"
+                        className="mt-1 bg-black/40 border-gray-800 text-white focus:ring-blue-500/50"
                     >
-                        <option value="0">Prefix (Starts with)</option>
-                        <option value="1">Suffix (Ends with)</option>
-                        <option value="2">Contains</option>
+                        <option value="0" className="bg-gray-900 text-white">Prefix (Starts with)</option>
+                        <option value="1" className="bg-gray-900 text-white">Suffix (Ends with)</option>
+                        <option value="2" className="bg-gray-900 text-white">Contains</option>
                     </Select>
                 </div>
 
                 <div>
-                    <Label htmlFor="reward">Reward (SUI)</Label>
+                    <Label htmlFor="reward" className="text-gray-400">Reward (SUI)</Label>
                     <Input 
                         id="reward"
                         type="number" 
                         step="0.1"
                         value={reward}
                         onChange={(e) => setReward(e.target.value)}
-                        className="mt-1"
+                        className="mt-1 bg-black/40 border-gray-800 text-white placeholder:text-gray-600 focus:ring-blue-500/50"
                     />
                 </div>
 
                 <Button 
-                    className="w-full mt-4" 
+                    className="w-full mt-4 bg-blue-600 hover:bg-blue-500 text-white" 
                     disabled={!isConnected || isPending || !pattern}
                     onClick={handleSubmit}
                 >

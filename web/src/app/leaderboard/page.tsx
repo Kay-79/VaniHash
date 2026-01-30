@@ -9,9 +9,9 @@ import { Button } from '@/components/ui/Button';
 
 // Mock Data
 const MINERS = [
-    { rank: 1, address: '0x123...456', hashrate: '1.2 GH/s', totalMined: 450, rewards: '5,200 SUI' },
-    { rank: 2, address: '0xabc...def', hashrate: '850 MH/s', totalMined: 320, rewards: '3,800 SUI' },
-    { rank: 3, address: '0x789...012', hashrate: '600 MH/s', totalMined: 210, rewards: '2,100 SUI' },
+    { rank: 1, address: '0x123...456', totalMined: 450, rewards: '5,200 SUI' },
+    { rank: 2, address: '0xabc...def', totalMined: 320, rewards: '3,800 SUI' },
+    { rank: 3, address: '0x789...012', totalMined: 210, rewards: '2,100 SUI' },
 ];
 
 const TRADERS = [
@@ -73,7 +73,7 @@ export default function LeaderboardPage() {
                 <Card className="bg-black/40 border-gray-800 backdrop-blur-sm">
                     <CardHeader>
                         <CardTitle className="text-xl text-white">
-                            {activeTab === 'miners' && "Hashrate Champions"}
+                            {activeTab === 'miners' && "Mining Leaders"}
                             {activeTab === 'traders' && "Volume Leaders"}
                             {activeTab === 'creators' && "Top Spenders"}
                         </CardTitle>
@@ -87,7 +87,6 @@ export default function LeaderboardPage() {
                                         <th className="px-6 py-4 font-semibold">Address</th>
                                         {activeTab === 'miners' && (
                                             <>
-                                                <th className="px-6 py-4 font-semibold">Hashrate</th>
                                                 <th className="px-6 py-4 font-semibold">Mined</th>
                                                 <th className="px-6 py-4 font-semibold text-right">Rewards</th>
                                             </>
@@ -138,7 +137,6 @@ export default function LeaderboardPage() {
                                             </td>
                                             {activeTab === 'miners' && (
                                                 <>
-                                                    <td className="px-6 py-4 text-white font-medium">{item.hashrate}</td>
                                                     <td className="px-6 py-4 text-gray-400">{item.totalMined}</td>
                                                     <td className="px-6 py-4 text-right text-green-400 font-bold">{item.rewards}</td>
                                                 </>
