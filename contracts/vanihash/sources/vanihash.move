@@ -36,7 +36,7 @@ public struct Task has key, store {
     id: UID,
     creator: address,
     reward: Balance<SUI>,
-    pattern: String,
+    patterns: vector<String>,
     /// 0: Prefix, 1: Suffix, 2: Contains
     pattern_type: u8,
     target_type: String,
@@ -52,7 +52,7 @@ public struct TaskCreated has copy, drop {
     task_id: ID,
     creator: address,
     reward_amount: u64,
-    pattern: String,
+    pattern_count: u64,
     target_type: String,
     difficulty: u8,
 }
@@ -71,7 +71,7 @@ public struct TaskCancelled has copy, drop {
 
 public entry fun create_task<T>(
     payment: Coin<SUI>,
-    pattern_bytes: vector<u8>,
+    patterns_bytes: vector<vector<u8>>,
     pattern_type: u8,
     lock_duration_ms: u64,
     clock: &Clock,
@@ -82,8 +82,21 @@ public entry fun create_task<T>(
     assert!(lock_duration_ms >= MIN_LOCK_PERIOD_MS, ELockUpTooShort);
 
     let creation_time = clock::timestamp_ms(clock);
-    let pattern = string::utf8(pattern_bytes);
-    let difficulty = (vector::length(&pattern_bytes) as u8);
+
+    // Convert all pattern bytes to Strings
+    let mut patterns = vector::empty<String>();
+    let mut total_difficulty = 0u64;
+    let pattern_count = vector::length(&patterns_bytes);
+    let mut i = 0;
+    while (i < pattern_count) {
+        let pattern_bytes = vector::borrow(&patterns_bytes, i);
+        let pattern = string::utf8(*pattern_bytes);
+        vector::push_back(&mut patterns, pattern);
+        total_difficulty = total_difficulty + (vector::length(pattern_bytes) as u64);
+        i = i + 1;
+    };
+
+    let difficulty = (total_difficulty as u8);
 
     // Capture the target type name
     let type_name_ascii = type_name::into_string(type_name::get<T>());
@@ -96,7 +109,7 @@ public entry fun create_task<T>(
         task_id,
         creator: tx_context::sender(ctx),
         reward_amount: value,
-        pattern: pattern,
+        pattern_count,
         target_type: target_type,
         difficulty,
     });
@@ -105,7 +118,7 @@ public entry fun create_task<T>(
         id,
         creator: tx_context::sender(ctx),
         reward: coin::into_balance(payment),
-        pattern,
+        patterns,
         pattern_type,
         target_type,
         difficulty,
@@ -153,7 +166,7 @@ public fun submit_proof<T: key + store>(
         id,
         creator,
         reward,
-        pattern,
+        patterns,
         pattern_type,
         target_type,
         difficulty: _,
@@ -180,7 +193,7 @@ public fun submit_proof<T: key + store>(
     assert!(proof_type == target_type, ETypeMismatch);
 
     let object_id = object::id(&vanity_object);
-    assert!(verify_pattern(&object_id, &pattern, pattern_type), EInvalidPattern);
+    assert!(verify_pattern(&object_id, &patterns, pattern_type), EInvalidPattern);
 
     // 1. Transfer Reward to Miner
     // reward_val is not needed if we convert whole balance to coin
@@ -202,24 +215,39 @@ public fun submit_proof<T: key + store>(
     });
 }
 
-/// Verifies if the object ID matches the pattern
-fun verify_pattern(id: &ID, pattern: &String, pattern_type: u8): bool {
+/// Verifies if the object ID matches any of the patterns
+fun verify_pattern(id: &ID, patterns: &vector<String>, pattern_type: u8): bool {
     let id_bytes = object::id_to_bytes(id);
     let hex_string = id_to_hex_string(&id_bytes);
+    let id_str_bytes = string::as_bytes(&hex_string);
 
-    let pattern_bytes = string::bytes(pattern);
-    let id_str_bytes = string::bytes(&hex_string);
+    // Check if ANY pattern matches (OR logic)
+    let pattern_count = vector::length(patterns);
+    let mut i = 0;
+    while (i < pattern_count) {
+        let pattern = vector::borrow(patterns, i);
+        let pattern_bytes = string::as_bytes(pattern);
 
-    if (pattern_type == 0) {
-        // Prefix
-        return starts_with(id_str_bytes, pattern_bytes)
-    } else if (pattern_type == 1) {
-        // Suffix
-        return ends_with(id_str_bytes, pattern_bytes)
-    } else if (pattern_type == 2) {
-        // Contains
-        return contains(id_str_bytes, pattern_bytes)
+        let matches = if (pattern_type == 0) {
+            // Prefix
+            starts_with(id_str_bytes, pattern_bytes)
+        } else if (pattern_type == 1) {
+            // Suffix
+            ends_with(id_str_bytes, pattern_bytes)
+        } else if (pattern_type == 2) {
+            // Contains
+            contains(id_str_bytes, pattern_bytes)
+        } else {
+            false
+        };
+
+        if (matches) {
+            return true
+        };
+
+        i = i + 1;
     };
+
     false
 }
 

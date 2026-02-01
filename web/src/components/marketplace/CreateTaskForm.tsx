@@ -15,24 +15,27 @@ interface CreateTaskFormProps {
 
 export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
     const { createTask, isPending, isConnected } = useCreateTask();
-    
-    const [pattern, setPattern] = useState('');
+
+    const [patterns, setPatterns] = useState<string[]>([]);
     const [patternType, setPatternType] = useState('0');
     const [reward, setReward] = useState('1');
 
     const handleSubmit = async () => {
-        if (!pattern) return;
-        
+        if (patterns.length === 0) {
+            toast.error('Please add at least one pattern');
+            return;
+        }
+
         try {
             await createTask(
-                pattern, 
-                Number(patternType), 
+                patterns,
+                Number(patternType),
                 reward,
                 (result) => {
                     toast.success("Task created successfully!");
                     if (onTaskCreated) onTaskCreated();
-                    // Reset form optional
-                    setPattern('');
+                    // Reset form
+                    setPatterns([]);
                 },
                 (error) => {
                     toast.error("Failed to create task: " + (error as Error).message);
@@ -50,20 +53,17 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
             </CardHeader>
             <CardContent className="space-y-4">
                 <div>
-                    <PatternInput 
-                        label="Pattern (Hex String)"
-                        id="pattern"
-                        placeholder="e.g. cafe, 8888" 
-                        value={pattern}
-                        onValidChange={(val) => setPattern(val)}
+                    <PatternInput
+                        label="Patterns (Hex Strings)"
+                        patterns={patterns}
+                        onPatternsChange={setPatterns}
                         className="mt-1"
-                        style={{ color: 'white' }}
                     />
                 </div>
 
                 <div>
                     <Label htmlFor="type" className="text-gray-400">Pattern Type</Label>
-                    <Select 
+                    <Select
                         id="type"
                         value={patternType}
                         onChange={(e) => setPatternType(e.target.value)}
@@ -77,9 +77,9 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
 
                 <div>
                     <Label htmlFor="reward" className="text-gray-400">Reward (SUI)</Label>
-                    <Input 
+                    <Input
                         id="reward"
-                        type="number" 
+                        type="number"
                         step="0.1"
                         value={reward}
                         onChange={(e) => setReward(e.target.value)}
@@ -87,14 +87,14 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
                     />
                 </div>
 
-                <Button 
-                    className="w-full mt-4 bg-blue-600 hover:bg-blue-500 text-white" 
-                    disabled={!isConnected || isPending || !pattern}
+                <Button
+                    className="w-full mt-4 bg-blue-600 hover:bg-blue-500 text-white"
+                    disabled={!isConnected || isPending || patterns.length === 0}
                     onClick={handleSubmit}
                 >
                     {isPending ? 'Creating Task...' : 'Create Task'}
                 </Button>
-                
+
                 {!isConnected && (
                     <p className="text-center text-xs text-red-400 mt-2">
                         Please connect your wallet first.

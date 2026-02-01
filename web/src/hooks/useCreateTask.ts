@@ -1,5 +1,6 @@
 import { useSignAndExecuteTransaction, useCurrentAccount } from '@mysten/dapp-kit';
 import { Transaction } from '@mysten/sui/transactions';
+import { bcs } from '@mysten/sui/bcs';
 import { PACKAGE_ID, MODULE_NAME } from '@/constants/chain';
 import { suiToMist } from '@/utils/formatters';
 
@@ -8,7 +9,7 @@ export function useCreateTask() {
     const { mutate: signAndExecute, isPending } = useSignAndExecuteTransaction();
 
     const createTask = (
-        pattern: string,
+        patterns: string[],
         patternType: number,
         rewardSui: string,
         onSuccess?: (result: any) => void,
@@ -19,17 +20,24 @@ export function useCreateTask() {
         const tx = new Transaction();
         const rewardMist = suiToMist(rewardSui);
         const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(rewardMist)]);
-        
+
         const encoder = new TextEncoder();
-        const patternBytes = encoder.encode(pattern);
+
+        // Convert each pattern to bytes and build vector<vector<u8>>
+        const patternsBytes = patterns.map(pattern => {
+            const bytes = encoder.encode(pattern);
+            return Array.from(bytes);
+        });
+
+        // Serialize using BCS
+        const serializedPatterns = bcs.vector(bcs.vector(bcs.u8())).serialize(patternsBytes);
 
         tx.moveCall({
             target: `${PACKAGE_ID}::${MODULE_NAME}::create_task`,
             arguments: [
                 coin,
-                tx.pure.vector('u8', Array.from(patternBytes)),
+                tx.pure(serializedPatterns),
                 tx.pure.u8(patternType),
-                // difficulty removed
                 tx.pure.u64(86400000), // 24h Lock
                 tx.object('0x6'), // Clock
             ],
