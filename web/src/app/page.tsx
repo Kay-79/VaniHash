@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { CreateTaskForm } from '@/components/marketplace/CreateTaskForm';
 import { TaskList } from '@/components/marketplace/TaskList';
@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { MinerStats } from '@/components/miner/MinerStats';
 
-export default function Home() {
+function HomeContent() {
     const { tasks, loading, refetch } = useFetchTasks();
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
     const [sortBy, setSortBy] = useState<'time' | 'reward'>('time');
@@ -123,5 +123,19 @@ export default function Home() {
                 </div>
             </div>
         </DashboardLayout>
+    );
+}
+
+export default function Home() {
+    return (
+        <Suspense fallback={
+            <DashboardLayout activityMode="tasks">
+                <div className="flex items-center justify-center h-screen">
+                    <div className="text-gray-400">Loading tasks...</div>
+                </div>
+            </DashboardLayout>
+        }>
+            <HomeContent />
+        </Suspense>
     );
 }

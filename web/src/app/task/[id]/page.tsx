@@ -5,11 +5,12 @@ import { useParams } from 'next/navigation';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner'; // Should create or use skeleton
-import { Task, TaskStatus, PatternType } from '@/types';
+import { Task, TaskStatus } from '@/types';
 import { mistToSui } from '@/utils/formatters';
-import { ShieldCheck, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { AlertCircle } from 'lucide-react';
 import { SubmitProofDialog } from '@/components/marketplace/SubmitProofDialog';
+import { TaskStatusBadge } from '@/components/marketplace/TaskStatusBadge';
+import { shouldBeActive, isInGracePeriod, formatTimeRemaining, getGracePeriodRemaining } from '@/utils/gracePeriod';
 
 export default function TaskDetailPage() {
     const params = useParams();
@@ -18,29 +19,34 @@ export default function TaskDetailPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
+    const fetchTask = async () => {
+        try {
+            const res = await fetch(`/api/tasks/${id}`);
+            if (!res.ok) throw new Error('Task not found');
+            const data = await res.json();
+            setTask(data);
+        } catch (err) {
+            setError((err as Error).message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
         if (!id) return;
-        const fetchTask = async () => {
-            try {
-                const res = await fetch(`/api/tasks/${id}`);
-                if (!res.ok) throw new Error('Task not found');
-                const data = await res.json();
-                setTask(data);
-            } catch (err) {
-                setError((err as Error).message);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchTask();
     }, [id]);
 
+    const handleGracePeriodExpire = () => {
+        fetchTask();
+    };
+
     if (loading) return (
-            <DashboardLayout>
-                <div className="flex items-center justify-center h-96">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-                </div>
-            </DashboardLayout>
+        <DashboardLayout>
+            <div className="flex items-center justify-center h-96">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+            </div>
+        </DashboardLayout>
     );
 
     if (error || !task) return (
@@ -50,8 +56,9 @@ export default function TaskDetailPage() {
     );
 
     const isPending = task.status === TaskStatus.PENDING || String(task.status) === 'PENDING';
-    const isActive = task.status === TaskStatus.ACTIVE || String(task.status) === 'ACTIVE';
+    const isActive = task.status === TaskStatus.ACTIVE || String(task.status) === 'ACTIVE' || shouldBeActive({ status: String(task.status), created_at: task.created_at || '' });
     const isCompleted = task.status === TaskStatus.COMPLETED || String(task.status) === 'COMPLETED';
+    const inGracePeriod = isPending && task.created_at && isInGracePeriod(task.created_at);
 
     return (
         <DashboardLayout activityMode="tasks">
@@ -62,6 +69,22 @@ export default function TaskDetailPage() {
                         ID: {task.task_id.slice(0, 6)}...{task.task_id.slice(-4)}
                     </Badge>
                 </div>
+
+                {/* Grace Period Warning */}
+                {inGracePeriod && task.created_at && (
+                    <Card className="bg-yellow-900/20 border-yellow-500/30">
+                        <CardContent className="p-4 flex items-start gap-3">
+                            <AlertCircle className="h-5 w-5 text-yellow-500 mt-0.5" />
+                            <div>
+                                <h3 className="text-sm font-semibold text-yellow-400">Grace Period Active</h3>
+                                <p className="text-xs text-gray-300 mt-1">
+                                    This task is in a {formatTimeRemaining(getGracePeriodRemaining(task.created_at))} grace period.
+                                    The creator can still cancel it. It will become active automatically after the grace period expires.
+                                </p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     {/* Main Info */}
@@ -88,12 +111,13 @@ export default function TaskDetailPage() {
                                 </div>
                                 <div className="p-4 rounded-lg bg-gray-800/20 border border-gray-800">
                                     <h3 className="text-sm text-gray-400 mb-1">Status</h3>
-                                    <div className="flex items-center gap-2">
-                                        {isCompleted ? <CheckCircle2 className="text-green-500" /> : <Clock className="text-blue-500" />}
-                                        <span className={`text-lg font-bold ${isCompleted ? 'text-green-500' : 'text-blue-500'}`}>
-                                            {String(task.status)}
-                                        </span>
-                                    </div>
+                                    {task.created_at && (
+                                        <TaskStatusBadge
+                                            status={String(task.status)}
+                                            createdAt={task.created_at}
+                                            onGracePeriodExpire={handleGracePeriodExpire}
+                                        />
+                                    )}
                                 </div>
                             </div>
                         </CardContent>
@@ -106,11 +130,11 @@ export default function TaskDetailPage() {
                                 <CardTitle className="text-white">Action</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                {(isPending || isActive) ? (
-                                    <SubmitProofDialog taskId={task.task_id} />
+                                {isActive ? (
+                                    <SubmitProofDialog taskId={task.task_id} onSuccess={fetchTask} />
                                 ) : (
                                     <div className="p-4 bg-gray-800/50 rounded text-center text-gray-400">
-                                        Task is not active
+                                        {inGracePeriod ? 'Waiting for grace period...' : 'Task is not active'}
                                     </div>
                                 )}
                             </CardContent>
@@ -131,7 +155,7 @@ export default function TaskDetailPage() {
                                 <div>
                                     <span className="text-xs text-gray-500 uppercase">Created</span>
                                     <p className="text-sm text-gray-300">
-                                        {new Date(Number(task.created_at)).toLocaleDateString()}
+                                        {task.created_at && new Date(Number(task.created_at)).toLocaleDateString()}
                                     </p>
                                 </div>
                             </CardContent>

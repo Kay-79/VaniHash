@@ -1,322 +1,275 @@
+/// VaniHash - Vanity address mining marketplace on Sui
+/// Main contract module that orchestrates all components
 module vanihash::vanihash;
 
 use std::string::{Self, String};
 use std::type_name;
-use std::vector;
-use sui::balance::{Self, Balance};
+use sui::balance;
 use sui::clock::{Self, Clock};
 use sui::coin::{Self, Coin};
-use sui::event;
+use sui::package::UpgradeCap;
 use sui::sui::SUI;
-
-/// Error codes
-const ETaskNotPending: u64 = 1;
-const ETaskNotActive: u64 = 2;
-// const EGracePeriodNotOver: u64 = 3; // Unused
-// const EGracePeriodOver: u64 = 4; // Unused
-const ELockUpNotOver: u64 = 5;
-const EInvalidPattern: u64 = 6;
-const ENotCreator: u64 = 7;
-const EInsufficientReward: u64 = 8;
-const ELockUpTooShort: u64 = 9;
-const ETypeMismatch: u64 = 10;
-
-/// Task Status
-const STATUS_PENDING: u8 = 0; // Grace period
-const STATUS_ACTIVE: u8 = 1; // Mining phase
-const STATUS_COMPLETED: u8 = 2; // Success
-const STATUS_CANCELLED: u8 = 3; // Cancelled
+use vanihash::admin::{Self, AdminCap};
+use vanihash::errors;
+use vanihash::events;
+use vanihash::pattern;
+use vanihash::task::{Self, Task};
 
 /// Constants
 const MIN_LOCK_PERIOD_MS: u64 = 86400000; // 24 hours
-const DEFAULT_GRACE_PERIOD_MS: u64 = 0; // 0 minutes for testing
+const DEFAULT_GRACE_PERIOD_MS: u64 = 900000; // 15 minutes
+const MAX_PATTERNS: u64 = 3; // Maximum 3 patterns per task
 
-/// The core Task object
-public struct Task has key, store {
-    id: UID,
-    creator: address,
-    reward: Balance<SUI>,
-    patterns: vector<String>,
-    /// 0: Prefix, 1: Suffix, 2: Contains
-    pattern_type: u8,
-    target_type: String,
-    difficulty: u8,
-    status: u8,
-    creation_time: u64,
-    grace_period_ms: u64,
-    lock_duration_ms: u64,
+/// Initialize the contract - creates and transfers AdminCap to deployer
+fun init(ctx: &mut TxContext) {
+    let admin_cap = admin::new(ctx);
+    transfer::public_transfer(admin_cap, ctx.sender());
 }
 
-/// Events
-public struct TaskCreated has copy, drop {
-    task_id: ID,
-    creator: address,
-    reward_amount: u64,
-    pattern_count: u64,
-    target_type: String,
-    difficulty: u8,
-}
-
-public struct TaskCompleted has copy, drop {
-    task_id: ID,
-    miner: address,
-    vanity_id: ID,
-}
-
-public struct TaskCancelled has copy, drop {
-    task_id: ID,
-}
-
-// --- Core Functions ---
-
+/// Create a new mining task
 public entry fun create_task<T>(
     payment: Coin<SUI>,
     patterns_bytes: vector<vector<u8>>,
     pattern_type: u8,
+    task_type: u8, // 0 = object, 1 = package
     lock_duration_ms: u64,
     clock: &Clock,
     ctx: &mut TxContext,
 ) {
+    // Validate inputs
     let value = coin::value(&payment);
-    assert!(value > 0, EInsufficientReward);
-    assert!(lock_duration_ms >= MIN_LOCK_PERIOD_MS, ELockUpTooShort);
+    let pattern_count = vector::length(&patterns_bytes);
+
+    assert!(value > 0, errors::insufficient_reward());
+    assert!(pattern_count > 0 && pattern_count <= MAX_PATTERNS, errors::invalid_pattern());
+    assert!(lock_duration_ms >= MIN_LOCK_PERIOD_MS, errors::lockup_too_short());
+    assert!(pattern::validate_pattern_type(pattern_type), errors::invalid_pattern_type());
+    assert!(
+        task_type == task::task_type_object() || task_type == task::task_type_package(),
+        errors::invalid_pattern_type(),
+    );
 
     let creation_time = clock::timestamp_ms(clock);
 
-    // Convert all pattern bytes to Strings
+    // Convert pattern bytes to Strings and validate
     let mut patterns = vector::empty<String>();
-    let mut total_difficulty = 0u64;
-    let pattern_count = vector::length(&patterns_bytes);
     let mut i = 0;
+
     while (i < pattern_count) {
-        let pattern_bytes = vector::borrow(&patterns_bytes, i);
-        let pattern = string::utf8(*pattern_bytes);
-        vector::push_back(&mut patterns, pattern);
-        total_difficulty = total_difficulty + (vector::length(pattern_bytes) as u64);
+        let pattern_str = string::utf8(*vector::borrow(&patterns_bytes, i));
+        assert!(pattern::validate_pattern(&pattern_str), errors::invalid_pattern());
+        vector::push_back(&mut patterns, pattern_str);
         i = i + 1;
     };
 
-    let difficulty = (total_difficulty as u8);
+    // Get target type and calculate difficulty
+    let target_type = type_name::get<T>();
+    let target_type_str = type_name::into_string(target_type);
+    let difficulty = 0u8; // Could be calculated based on pattern complexity
 
-    // Capture the target type name
-    let type_name_ascii = type_name::into_string(type_name::get<T>());
-    let target_type = string::from_ascii(type_name_ascii);
-
-    let id = object::new(ctx);
-    let task_id = object::uid_to_inner(&id);
-
-    event::emit(TaskCreated {
-        task_id,
-        creator: tx_context::sender(ctx),
-        reward_amount: value,
-        pattern_count,
-        target_type: target_type,
-        difficulty,
-    });
-
-    let task = Task {
-        id,
-        creator: tx_context::sender(ctx),
-        reward: coin::into_balance(payment),
+    // Create task using task module
+    let new_task = task::new(
+        tx_context::sender(ctx),
+        coin::into_balance(payment),
         patterns,
         pattern_type,
-        target_type,
+        task_type,
+        target_type_str,
         difficulty,
-        status: STATUS_PENDING,
         creation_time,
-        grace_period_ms: DEFAULT_GRACE_PERIOD_MS,
+        DEFAULT_GRACE_PERIOD_MS,
         lock_duration_ms,
-    };
+        ctx,
+    );
 
-    transfer::share_object(task);
+    let task_id = object::uid_to_inner(task::id(&new_task));
+
+    // Extract individual patterns (empty string if not provided)
+    let prefix_pattern = if (vector::length(&patterns) > 0) { *vector::borrow(&patterns, 0) } else {
+        string::utf8(b"")
+    };
+    let suffix_pattern = if (vector::length(&patterns) > 1) { *vector::borrow(&patterns, 1) } else {
+        string::utf8(b"")
+    };
+    let contain_pattern = if (vector::length(&patterns) > 2) { *vector::borrow(&patterns, 2) }
+    else { string::utf8(b"") };
+
+    // Emit event
+    events::emit_task_created(
+        task_id,
+        tx_context::sender(ctx),
+        value,
+        prefix_pattern,
+        suffix_pattern,
+        contain_pattern,
+        task_type,
+        *task::target_type(&new_task),
+        difficulty,
+    );
+
+    // Share the task object
+    transfer::public_share_object(new_task);
 }
 
+/// Cancel a task (creator only, respects grace period and lock period)
 public entry fun cancel_task(task: &mut Task, clock: &Clock, ctx: &mut TxContext) {
-    assert!(task.creator == tx_context::sender(ctx), ENotCreator);
-    assert!(task.status != STATUS_COMPLETED && task.status != STATUS_CANCELLED, ETaskNotActive);
+    // Verify creator
+    assert!(task::creator(task) == tx_context::sender(ctx), errors::not_creator());
+
+    // Verify task is not already completed or cancelled
+    let status = task::status(task);
+    assert!(
+        status != task::status_completed() && status != task::status_cancelled(),
+        errors::task_not_active(),
+    );
 
     let current_time = clock::timestamp_ms(clock);
-    let is_in_grace_period = current_time < task.creation_time + task.grace_period_ms;
-    let is_lock_expired = current_time > task.creation_time + task.lock_duration_ms;
+    let creation_time = task::creation_time(task);
+    let grace_period_ms = task::grace_period_ms(task);
+    let lock_duration_ms = task::lock_duration_ms(task);
 
-    // Can cancel if in grace period OR lock-up expired.
-    // If not in grace period AND lock-up not expired, fail.
-    if (!is_in_grace_period && !is_lock_expired) {
-        abort ELockUpNotOver
-    };
+    // Check grace period and lock period
+    let is_in_grace_period = current_time < creation_time + grace_period_ms;
+    let is_lock_expired = current_time >= creation_time + lock_duration_ms;
 
-    task.status = STATUS_CANCELLED;
+    assert!(
+        is_in_grace_period || is_lock_expired,
+        if (is_in_grace_period) { errors::grace_period_active() } else {
+            errors::lock_period_active()
+        },
+    );
 
-    let reward_amount = balance::value(&task.reward);
-    let refund = coin::take(&mut task.reward, reward_amount, ctx);
-    transfer::public_transfer(refund, task.creator);
+    // Mark task as cancelled
+    task::cancel(task);
 
-    event::emit(TaskCancelled {
-        task_id: object::uid_to_inner(&task.id),
-    });
+    // Emit event
+    events::emit_task_cancelled(object::uid_to_inner(task::id(task)));
 }
 
+/// Submit proof for a task
 public fun submit_proof<T: key + store>(
-    task: Task,
+    task_obj: Task,
     vanity_object: T,
     clock: &Clock,
     ctx: &mut TxContext,
 ) {
-    let Task {
-        id,
-        creator,
-        reward,
-        patterns,
-        pattern_type,
-        target_type,
-        difficulty: _,
-        status,
-        creation_time,
-        grace_period_ms,
-        lock_duration_ms: _,
-    } = task;
-
-    // Verify Grace Period manually since we destructed the object
-    if (status == STATUS_PENDING) {
-        let current_time = clock::timestamp_ms(clock);
-        if (current_time < creation_time + grace_period_ms) {
-            abort ETaskNotActive
-        };
-    };
-
-    // Verify Active Status
-    assert!(status != STATUS_COMPLETED && status != STATUS_CANCELLED, ETaskNotActive);
-
-    // Verify Type Match
-    let proof_type_ascii = type_name::into_string(type_name::get<T>());
-    let proof_type = string::from_ascii(proof_type_ascii);
-    assert!(proof_type == target_type, ETypeMismatch);
-
     let object_id = object::id(&vanity_object);
-    assert!(verify_pattern(&object_id, &patterns, pattern_type), EInvalidPattern);
+    let current_time = clock::timestamp_ms(clock);
 
-    // 1. Transfer Reward to Miner
-    // reward_val is not needed if we convert whole balance to coin
-    let coin = coin::from_balance(reward, ctx);
-    transfer::public_transfer(coin, tx_context::sender(ctx));
+    // Verify task status
+    let status = task::status(&task_obj);
+    assert!(
+        status != task::status_completed() && status != task::status_cancelled(),
+        errors::task_not_active(),
+    );
 
-    // 2. Transfer Object to Creator
+    // Verify grace period has passed
+    let creation_time = task::creation_time(&task_obj);
+    let grace_period_ms = task::grace_period_ms(&task_obj);
+
+    assert!(current_time >= creation_time + grace_period_ms, errors::grace_period_active());
+
+    // Verify object type matches
+    let actual_type = type_name::get<T>();
+    let actual_type_str = type_name::into_string(actual_type);
+    let expected_type_str = task::target_type(&task_obj);
+
+    assert!(
+        std::ascii::as_bytes(&actual_type_str) == std::ascii::as_bytes(expected_type_str),
+        errors::invalid_object_type(),
+    );
+
+    // Verify pattern match using pattern module
+    assert!(
+        pattern::verify_pattern(
+            &object_id,
+            task::patterns(&task_obj),
+            task::pattern_type(&task_obj),
+        ),
+        errors::invalid_proof(),
+    );
+
+    // Extract task data and destroy task
+    let (task_id_uid, reward, creator) = task::extract_reward(task_obj);
+    let task_id = object::uid_to_inner(&task_id_uid);
+
+    // Transfer reward to miner
+    let reward_coin = coin::from_balance(reward, ctx);
+    transfer::public_transfer(reward_coin, tx_context::sender(ctx));
+
+    // Transfer vanity object to creator
     transfer::public_transfer(vanity_object, creator);
 
-    // 3. Delete Task Object
-    let task_id = object::uid_to_inner(&id); // Get ID before deletion
-    object::delete(id);
+    // Delete task
+    object::delete(task_id_uid);
 
-    // 4. Emit Event
-    event::emit(TaskCompleted {
+    // Emit event
+    events::emit_task_completed(
         task_id,
-        miner: tx_context::sender(ctx),
-        vanity_id: object_id,
-    });
+        tx_context::sender(ctx),
+        object_id,
+    );
 }
 
-/// Verifies if the object ID matches any of the patterns
-fun verify_pattern(id: &ID, patterns: &vector<String>, pattern_type: u8): bool {
-    let id_bytes = object::id_to_bytes(id);
-    let hex_string = id_to_hex_string(&id_bytes);
-    let id_str_bytes = string::as_bytes(&hex_string);
+/// Submit package proof for a package mining task
+/// Miner publishes packages until finding one with desired Package ID pattern
+/// Then submits the UpgradeCap as proof
+public fun submit_package_proof(
+    task_obj: Task,
+    upgrade_cap: UpgradeCap,
+    clock: &Clock,
+    ctx: &mut TxContext,
+) {
+    let current_time = clock::timestamp_ms(clock);
 
-    // Check if ANY pattern matches (OR logic)
-    let pattern_count = vector::length(patterns);
-    let mut i = 0;
-    while (i < pattern_count) {
-        let pattern = vector::borrow(patterns, i);
-        let pattern_bytes = string::as_bytes(pattern);
+    // Verify task is PACKAGE type
+    assert!(task::task_type(&task_obj) == task::task_type_package(), errors::invalid_object_type());
 
-        let matches = if (pattern_type == 0) {
-            // Prefix
-            starts_with(id_str_bytes, pattern_bytes)
-        } else if (pattern_type == 1) {
-            // Suffix
-            ends_with(id_str_bytes, pattern_bytes)
-        } else if (pattern_type == 2) {
-            // Contains
-            contains(id_str_bytes, pattern_bytes)
-        } else {
-            false
-        };
+    // Verify task status
+    let status = task::status(&task_obj);
+    assert!(
+        status != task::status_completed() && status != task::status_cancelled(),
+        errors::task_not_active(),
+    );
 
-        if (matches) {
-            return true
-        };
+    // Verify grace period has passed
+    let creation_time = task::creation_time(&task_obj);
+    let grace_period_ms = task::grace_period_ms(&task_obj);
 
-        i = i + 1;
-    };
+    assert!(current_time >= creation_time + grace_period_ms, errors::grace_period_active());
 
-    false
-}
+    // Extract Package ID from UpgradeCap
+    let package_id = upgrade_cap.package();
 
-/// Converts 32-byte ID to 64-char lowercase hex string
-fun id_to_hex_string(bytes: &vector<u8>): String {
-    let mut hex_chars = vector::empty<u8>();
-    let len = vector::length(bytes);
-    let mut i = 0;
-    while (i < len) {
-        let b = *vector::borrow(bytes, i);
-        let high = b >> 4;
-        let low = b & 0xF;
-        vector::push_back(&mut hex_chars, to_hex_char(high));
-        vector::push_back(&mut hex_chars, to_hex_char(low));
-        i = i + 1;
-    };
-    string::utf8(hex_chars)
-}
+    // Verify pattern match using pattern module
+    // IMPORTANT: We validate the PACKAGE ID, not the UpgradeCap ID
+    assert!(
+        pattern::verify_pattern(
+            &package_id,
+            task::patterns(&task_obj),
+            task::pattern_type(&task_obj),
+        ),
+        errors::invalid_proof(),
+    );
 
-fun to_hex_char(val: u8): u8 {
-    if (val < 10) { val + 48 } else { val + 87 } // 0-9 ('0'=48), a-f ('a'=97 -> 10+87=97)
-}
+    // Extract task data and destroy task
+    let (task_id_uid, reward, creator) = task::extract_reward(task_obj);
+    let task_id = object::uid_to_inner(&task_id_uid);
 
-fun starts_with(haystack: &vector<u8>, needle: &vector<u8>): bool {
-    let h_len = vector::length(haystack);
-    let n_len = vector::length(needle);
-    if (n_len > h_len) return false;
+    // Transfer reward to miner
+    let reward_coin = coin::from_balance(reward, ctx);
+    transfer::public_transfer(reward_coin, tx_context::sender(ctx));
 
-    let mut i = 0;
-    while (i < n_len) {
-        if (vector::borrow(haystack, i) != vector::borrow(needle, i)) return false;
-        i = i + 1;
-    };
-    true
-}
+    // Transfer UpgradeCap to creator
+    transfer::public_transfer(upgrade_cap, creator);
 
-fun ends_with(haystack: &vector<u8>, needle: &vector<u8>): bool {
-    let h_len = vector::length(haystack);
-    let n_len = vector::length(needle);
-    if (n_len > h_len) return false;
+    // Delete task
+    object::delete(task_id_uid);
 
-    let start = h_len - n_len;
-    let mut i = 0;
-    while (i < n_len) {
-        if (vector::borrow(haystack, start + i) != vector::borrow(needle, i)) return false;
-        i = i + 1;
-    };
-    true
-}
-
-fun contains(haystack: &vector<u8>, needle: &vector<u8>): bool {
-    let h_len = vector::length(haystack);
-    let n_len = vector::length(needle);
-    if (n_len > h_len) return false;
-    if (n_len == 0) return true;
-
-    let mut i = 0;
-    while (i <= h_len - n_len) {
-        let mut j = 0;
-        let mut match_found = true;
-        while (j < n_len) {
-            if (vector::borrow(haystack, i + j) != vector::borrow(needle, j)) {
-                match_found = false;
-                break
-            };
-            j = j + 1;
-        };
-        if (match_found) return true;
-        i = i + 1;
-    };
-    false
+    // Emit event
+    events::emit_task_completed(
+        task_id,
+        tx_context::sender(ctx),
+        package_id,
+    );
 }

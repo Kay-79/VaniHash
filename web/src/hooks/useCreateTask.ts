@@ -11,6 +11,7 @@ export function useCreateTask() {
     const createTask = (
         patterns: string[],
         patternType: number,
+        taskType: number,  // NEW: 0 = object, 1 = package
         rewardSui: string,
         onSuccess?: (result: any) => void,
         onError?: (error: any) => void
@@ -38,6 +39,7 @@ export function useCreateTask() {
                 coin,
                 tx.pure(serializedPatterns),
                 tx.pure.u8(patternType),
+                tx.pure.u8(taskType),  // NEW: task_type parameter
                 tx.pure.u64(86400000), // 24h Lock
                 tx.object('0x6'), // Clock
             ],

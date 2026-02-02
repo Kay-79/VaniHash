@@ -14,7 +14,6 @@ interface SubmitProofDialogProps {
 export function SubmitProofDialog({ taskId, onSuccess }: SubmitProofDialogProps) {
     const [open, setOpen] = useState(false);
     const [objectId, setObjectId] = useState('');
-    const [objectType, setObjectType] = useState('0x2::coin::Coin<0x2::sui::SUI>');
     const { submitProof, isPending } = useSubmitProof();
 
     const handleSubmit = (e: React.FormEvent) => {
@@ -24,10 +23,15 @@ export function SubmitProofDialog({ taskId, onSuccess }: SubmitProofDialogProps)
             return;
         }
 
+        // Validate object ID format (0x + hex chars)
+        if (!objectId.startsWith('0x')) {
+            toast.error("Object ID must start with 0x");
+            return;
+        }
+
         submitProof(
             taskId,
             objectId,
-            objectType,
             () => {
                 toast.success("Proof submitted successfully!");
                 setOpen(false);
@@ -47,38 +51,45 @@ export function SubmitProofDialog({ taskId, onSuccess }: SubmitProofDialogProps)
                     Submit Proof
                 </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-lg">
                 <DialogHeader>
-                    <DialogTitle>Submit Mined Proof</DialogTitle>
+                    <DialogTitle>Submit Vanity Object</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+                    <div className="bg-blue-900/20 border border-blue-800 rounded-lg p-4">
+                        <h4 className="text-sm font-semibold text-blue-300 mb-2">📦 How to Mine Vanity Objects</h4>
+                        <div className="text-xs text-gray-300 space-y-2">
+                            <p><strong>Option 1: Package ID Mining</strong></p>
+                            <ol className="list-decimal list-inside space-y-1 ml-2">
+                                <li>Deploy a Move package with <code className="bg-gray-800 px-1 rounded">sui client publish</code></li>
+                                <li>Find the <strong>UpgradeCap</strong> object ID from "Created Objects"</li>
+                                <li>Submit the UpgradeCap object ID below</li>
+                            </ol>
+                            <p className="mt-2"><strong>Option 2: Any Object</strong></p>
+                            <ol className="list-decimal list-inside space-y-1 ml-2">
+                                <li>Create/mint any object (coin, NFT, etc.)</li>
+                                <li>Check if the object ID matches the pattern</li>
+                                <li>Submit the object ID below</li>
+                            </ol>
+                        </div>
+                    </div>
+
                     <div>
-                        <Label htmlFor="objectId">Mined Object ID (Proof)</Label>
-                        <Input 
-                            id="objectId" 
-                            placeholder="0x..." 
+                        <Label htmlFor="objectId">Vanity Object ID</Label>
+                        <Input
+                            id="objectId"
+                            placeholder="0x..."
                             value={objectId}
                             onChange={(e) => setObjectId(e.target.value)}
-                            className="mt-1"
+                            className="mt-1 font-mono"
                         />
                         <p className="text-xs text-gray-500 mt-1">
-                            The ID of the object that matches the task pattern.
+                            The object ID that matches the task pattern
                         </p>
-                    </div>
-                    
-                    <div>
-                        <Label htmlFor="objectType">Object Type (Optional)</Label>
-                        <Input 
-                            id="objectType" 
-                            placeholder="e.g. 0x2::coin::Coin<0x2::sui::SUI>" 
-                            value={objectType}
-                            onChange={(e) => setObjectType(e.target.value)}
-                            className="mt-1 font-mono text-xs"
-                        />
                     </div>
 
                     <Button type="submit" disabled={isPending} className="w-full bg-blue-600 hover:bg-blue-700">
-                        {isPending ? 'Submitting...' : 'Confirm Submission'}
+                        {isPending ? 'Submitting...' : 'Submit Proof & Claim Reward'}
                     </Button>
                 </form>
             </DialogContent>

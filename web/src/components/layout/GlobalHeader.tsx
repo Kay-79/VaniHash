@@ -1,26 +1,27 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Badge } from "@/components/ui/Badge";
 import { WalletConnect } from '@/components/ui/WalletConnect';
 import { Search } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { cn } from '@/lib/utils';
+import { useCurrentAccount } from '@mysten/dapp-kit';
+import { isAdmin } from '@/constants/admin';
 
 export function GlobalHeader() {
     const pathname = usePathname();
+    const account = useCurrentAccount();
+    const showAdminLink = isAdmin(account?.address);
     const router = useRouter();
-    const searchParams = useSearchParams();
 
     const handleSearch = (term: string) => {
-        const params = new URLSearchParams(searchParams.toString());
         if (term) {
-            params.set('search', term);
+            router.push(`${pathname}?search=${encodeURIComponent(term)}`);
         } else {
-            params.delete('search');
+            router.push(pathname);
         }
-        router.replace(`${pathname}?${params.toString()}`);
     };
 
     const isActive = (path: string) => pathname === path;
@@ -28,11 +29,11 @@ export function GlobalHeader() {
     return (
         <div className="flex items-center justify-between px-6 py-4 bg-black/90 border-b border-gray-800 backdrop-blur-md sticky top-0 z-50">
             <div className="flex items-center gap-8">
-                 {/* Logo */}
+                {/* Logo */}
                 <Link href="/" className="flex items-center gap-2 group">
                     <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-yellow-500 to-orange-600 group-hover:animate-pulse" />
                     <h1 className="text-xl font-bold text-white flex items-center gap-2">
-                        VaniHash 
+                        VaniHash
                         <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 text-[10px] px-1.5 py-0">
                             BETA
                         </Badge>
@@ -41,24 +42,32 @@ export function GlobalHeader() {
 
                 {/* Nav Links */}
                 <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-400">
-                    <Link 
-                        href="/" 
+                    <Link
+                        href="/"
                         className={cn("transition-colors hover:text-white", isActive('/') ? "text-yellow-500 font-bold" : "")}
                     >
                         Tasks
                     </Link>
-                    <Link 
-                        href="/marketplace" 
+                    <Link
+                        href="/marketplace"
                         className={cn("transition-colors hover:text-white", isActive('/marketplace') ? "text-yellow-500 font-bold" : "")}
                     >
                         Trading
                     </Link>
-                    <Link 
-                        href="/leaderboard" 
+                    <Link
+                        href="/leaderboard"
                         className={cn("transition-colors hover:text-white", isActive('/leaderboard') ? "text-yellow-500 font-bold" : "")}
                     >
                         Leaderboard
                     </Link>
+                    {showAdminLink && (
+                        <Link
+                            href="/admin"
+                            className={cn("transition-colors hover:text-white", isActive('/admin') ? "text-yellow-500 font-bold" : "")}
+                        >
+                            Admin
+                        </Link>
+                    )}
                 </nav>
             </div>
 
@@ -66,10 +75,9 @@ export function GlobalHeader() {
             <div className="flex items-center gap-4">
                 <div className="relative hidden lg:block w-64">
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-                    <Input 
-                        placeholder="Search collections, tasks..." 
-                        className="pl-9 bg-gray-900 border-gray-800 focus:border-yellow-500 focus:ring-yellow-500/20 h-9" 
-                        defaultValue={searchParams.get('search') || ''}
+                    <Input
+                        placeholder="Search collections, tasks..."
+                        className="pl-9 bg-gray-900 border-gray-800 focus:border-yellow-500 focus:ring-yellow-500/20 h-9"
                         onChange={(e) => handleSearch(e.target.value)}
                     />
                 </div>

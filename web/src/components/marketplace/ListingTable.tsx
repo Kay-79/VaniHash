@@ -25,7 +25,7 @@ interface ListingTableProps {
 }
 
 export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
-    const { buy, buyBatch, delist, isPending } = useMarketplace();
+    const { buy, delist, isPending } = useMarketplace();
     const { kioskId, kioskCapId } = useOwnedKiosk();
     const router = useRouter();
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -42,11 +42,14 @@ export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
     };
 
     const handleBatchBuy = () => {
+        // TODO: Implement batch buy functionality
+        toast.info("Batch buying coming soon");
+        /* 
         const itemsToBuy = listings
             .filter(l => selectedIds.has(l.listing_id))
             .map(l => {
-                const match = l.type.match(/<(.+)>/);
-                const itemType = match ? match[1] : l.type; // Fallback or handle error
+                const match = l.type.match(/\<(.+)\>/);
+                const itemType = match ? match[1] : l.type;
                 return {
                     listingId: l.listing_id,
                     itemType,
@@ -63,8 +66,9 @@ export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
                 setSelectedIds(new Set());
                 if (onBuySuccess) onBuySuccess();
             },
-            (err) => toast.error("Failed to buy batch: " + err.message)
+            (err: Error) => toast.error("Failed to buy batch: " + err.message)
         );
+        */
     };
 
     const handleBuy = (e: React.MouseEvent, listing: Listing) => {
@@ -77,10 +81,12 @@ export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
         }
         const itemType = match[1];
 
+        // The buy function expects: (kioskId, itemId, itemType, priceMist, onSuccess, onError)
         buy(
-            listing.listing_id,
-            itemType,
-            listing.price,
+            listing.seller,      // kioskId (seller's kiosk)
+            listing.listing_id,  // itemId
+            itemType,            // itemType
+            listing.price,       // priceMist
             () => {
                 toast.success("Item bought successfully!");
                 if (onBuySuccess) onBuySuccess();

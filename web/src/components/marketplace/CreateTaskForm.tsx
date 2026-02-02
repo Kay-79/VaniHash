@@ -4,10 +4,8 @@ import { useCreateTask } from '@/hooks/useCreateTask';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
-import { PatternInput } from './PatternInput';
 import { Label } from '@/components/ui/Label';
-import { Select } from '@/components/ui/Select';
-import { useFetchTasks } from '@/hooks/useFetchTasks'; // Actually passing callback from parent is better.
+import { validatePattern } from '@/utils/validators';
 
 interface CreateTaskFormProps {
     onTaskCreated?: () => void;
@@ -16,26 +14,69 @@ interface CreateTaskFormProps {
 export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
     const { createTask, isPending, isConnected } = useCreateTask();
 
-    const [patterns, setPatterns] = useState<string[]>([]);
-    const [patternType, setPatternType] = useState('0');
-    const [reward, setReward] = useState('1');
+    // One pattern per type
+    const [prefixPattern, setPrefixPattern] = useState('');
+    const [suffixPattern, setSuffixPattern] = useState('');
+    const [containsPattern, setContainsPattern] = useState('');
+    const [reward, setReward] = useState('0.01');
+    const [taskType, setTaskType] = useState<'object' | 'package'>('object');
+
+    // Validation errors
+    const [prefixError, setPrefixError] = useState('');
+    const [suffixError, setSuffixError] = useState('');
+    const [containsError, setContainsError] = useState('');
+
+    const validateInput = (value: string, setError: (err: string) => void): boolean => {
+        if (!value) {
+            setError('');
+            return true;
+        }
+        if (!validatePattern(value)) {
+            setError('Only hex characters (0-9, a-f) allowed');
+            return false;
+        }
+        setError('');
+        return true;
+    };
 
     const handleSubmit = async () => {
+        // Collect patterns in order: prefix, suffix, contains
+        const patterns: string[] = [];
+
+        if (prefixPattern) {
+            if (!validateInput(prefixPattern, setPrefixError)) return;
+            patterns.push(prefixPattern);
+        }
+        if (suffixPattern) {
+            if (!validateInput(suffixPattern, setSuffixError)) return;
+            patterns.push(suffixPattern);
+        }
+        if (containsPattern) {
+            if (!validateInput(containsPattern, setContainsError)) return;
+            patterns.push(containsPattern);
+        }
+
         if (patterns.length === 0) {
             toast.error('Please add at least one pattern');
             return;
         }
 
         try {
+            // Note: Current contract accepts task_type parameter
+            // 0 = OBJECT (regular object mining)
+            // 1 = PACKAGE (package ID mining)
             await createTask(
                 patterns,
-                Number(patternType),
+                2, // CONTAINS type - most flexible for mixed patterns
+                taskType === 'package' ? 1 : 0,  // NEW: task_type parameter
                 reward,
                 (result) => {
-                    toast.success("Task created successfully!");
+                    toast.success(`Task created with ${patterns.length} pattern(s)!`);
                     if (onTaskCreated) onTaskCreated();
                     // Reset form
-                    setPatterns([]);
+                    setPrefixPattern('');
+                    setSuffixPattern('');
+                    setContainsPattern('');
                 },
                 (error) => {
                     toast.error("Failed to create task: " + (error as Error).message);
@@ -46,33 +87,101 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
         }
     };
 
+    const hasAtLeastOnePattern = prefixPattern || suffixPattern || containsPattern;
+
     return (
         <Card className="w-full bg-gray-900/50 border-gray-800 backdrop-blur-sm">
             <CardHeader>
                 <CardTitle className="text-xl text-white">Create New Task</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+                {/* Task Type Selector */}
                 <div>
-                    <PatternInput
-                        label="Patterns (Hex Strings)"
-                        patterns={patterns}
-                        onPatternsChange={setPatterns}
-                        className="mt-1"
-                    />
+                    <Label htmlFor="taskType" className="text-gray-400">Task Type</Label>
+                    <select
+                        id="taskType"
+                        value={taskType}
+                        onChange={(e) => setTaskType(e.target.value as 'object' | 'package')}
+                        className="w-full mt-1 px-3 py-2 bg-black/40 border border-gray-800 rounded-md text-white focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500"
+                    >
+                        <option value="object">Object ID (NFT, Coin, Gas Object, etc.)</option>
+                        <option value="package">Package ID (Brand Identity)</option>
+                    </select>
+                    {taskType === 'package' && (
+                        <p className="text-xs text-yellow-400 mt-2 flex items-start gap-2">
+                            <span>⚠️</span>
+                            <span>
+                                Package mining requires repeatedly publishing packages. Miners will submit the UpgradeCap.
+                                This is expensive (~0.5 SUI per attempt) - set a high reward!
+                            </span>
+                        </p>
+                    )}
                 </div>
 
-                <div>
-                    <Label htmlFor="type" className="text-gray-400">Pattern Type</Label>
-                    <Select
-                        id="type"
-                        value={patternType}
-                        onChange={(e) => setPatternType(e.target.value)}
-                        className="mt-1 bg-black/40 border-gray-800 text-white focus:ring-blue-500/50"
-                    >
-                        <option value="0" className="bg-gray-900 text-white">Prefix (Starts with)</option>
-                        <option value="1" className="bg-gray-900 text-white">Suffix (Ends with)</option>
-                        <option value="2" className="bg-gray-900 text-white">Contains</option>
-                    </Select>
+                <div className="space-y-3">
+                    <p className="text-sm text-gray-400">
+                        Add up to 3 patterns (one per type). The {taskType === 'package' ? 'Package ID' : 'object ID'} must contain all specified patterns.
+                    </p>
+
+                    {/* Prefix Pattern */}
+                    <div>
+                        <Label htmlFor="prefix" className="text-gray-400 flex items-center gap-2">
+                            <span className="inline-block w-20">Prefix</span>
+                            <span className="text-xs text-gray-500">(starts with)</span>
+                        </Label>
+                        <Input
+                            id="prefix"
+                            value={prefixPattern}
+                            onChange={(e) => {
+                                setPrefixPattern(e.target.value.toLowerCase());
+                                validateInput(e.target.value, setPrefixError);
+                            }}
+                            placeholder="e.g. cafe, 0000"
+                            className={`mt-1 bg-black/40 border-gray-800 text-white placeholder:text-gray-600 focus:ring-blue-500/50 font-mono ${prefixError ? 'border-red-500' : ''
+                                }`}
+                        />
+                        {prefixError && <p className="text-red-500 text-xs mt-1">{prefixError}</p>}
+                    </div>
+
+                    {/* Suffix Pattern */}
+                    <div>
+                        <Label htmlFor="suffix" className="text-gray-400 flex items-center gap-2">
+                            <span className="inline-block w-20">Suffix</span>
+                            <span className="text-xs text-gray-500">(ends with)</span>
+                        </Label>
+                        <Input
+                            id="suffix"
+                            value={suffixPattern}
+                            onChange={(e) => {
+                                setSuffixPattern(e.target.value.toLowerCase());
+                                validateInput(e.target.value, setSuffixError);
+                            }}
+                            placeholder="e.g. dead, ffff"
+                            className={`mt-1 bg-black/40 border-gray-800 text-white placeholder:text-gray-600 focus:ring-blue-500/50 font-mono ${suffixError ? 'border-red-500' : ''
+                                }`}
+                        />
+                        {suffixError && <p className="text-red-500 text-xs mt-1">{suffixError}</p>}
+                    </div>
+
+                    {/* Contains Pattern */}
+                    <div>
+                        <Label htmlFor="contains" className="text-gray-400 flex items-center gap-2">
+                            <span className="inline-block w-20">Contains</span>
+                            <span className="text-xs text-gray-500">(anywhere)</span>
+                        </Label>
+                        <Input
+                            id="contains"
+                            value={containsPattern}
+                            onChange={(e) => {
+                                setContainsPattern(e.target.value.toLowerCase());
+                                validateInput(e.target.value, setContainsError);
+                            }}
+                            placeholder="e.g. 8888, beef"
+                            className={`mt-1 bg-black/40 border-gray-800 text-white placeholder:text-gray-600 focus:ring-blue-500/50 font-mono ${containsError ? 'border-red-500' : ''
+                                }`}
+                        />
+                        {containsError && <p className="text-red-500 text-xs mt-1">{containsError}</p>}
+                    </div>
                 </div>
 
                 <div>
@@ -81,6 +190,7 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
                         id="reward"
                         type="number"
                         step="0.1"
+                        min="0.01"
                         value={reward}
                         onChange={(e) => setReward(e.target.value)}
                         className="mt-1 bg-black/40 border-gray-800 text-white placeholder:text-gray-600 focus:ring-blue-500/50"
@@ -89,7 +199,7 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
 
                 <Button
                     className="w-full mt-4 bg-blue-600 hover:bg-blue-500 text-white"
-                    disabled={!isConnected || isPending || patterns.length === 0}
+                    disabled={!isConnected || isPending || !hasAtLeastOnePattern}
                     onClick={handleSubmit}
                 >
                     {isPending ? 'Creating Task...' : 'Create Task'}
@@ -98,6 +208,12 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
                 {!isConnected && (
                     <p className="text-center text-xs text-red-400 mt-2">
                         Please connect your wallet first.
+                    </p>
+                )}
+
+                {!hasAtLeastOnePattern && isConnected && (
+                    <p className="text-center text-xs text-yellow-400 mt-2">
+                        Add at least one pattern to create a task
                     </p>
                 )}
             </CardContent>

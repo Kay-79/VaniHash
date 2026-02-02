@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+export const dynamic = 'force-dynamic';
+
+import { useEffect, useState, useCallback, Suspense } from 'react';
 import { INDEXER_URL } from '@/constants/chain';
 import { ListingCard } from '@/components/marketplace/ListingCard';
 import { MarketplaceStats } from '@/components/marketplace/MarketplaceStats';
@@ -20,7 +22,7 @@ interface Listing {
     timestamp_ms: number;
 }
 
-export default function MarketplacePage() {
+function MarketplaceContent() {
     const [listings, setListings] = useState<Listing[]>([]);
     const [loading, setLoading] = useState(true);
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
@@ -116,5 +118,19 @@ export default function MarketplacePage() {
                 )}
             </div>
         </DashboardLayout>
+    );
+}
+
+export default function MarketplacePage() {
+    return (
+        <Suspense fallback={
+            <DashboardLayout activityMode="market">
+                <div className="flex items-center justify-center h-screen">
+                    <div className="text-gray-400">Loading marketplace...</div>
+                </div>
+            </DashboardLayout>
+        }>
+            <MarketplaceContent />
+        </Suspense>
     );
 }

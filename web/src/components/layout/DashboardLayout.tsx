@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, Suspense } from "react";
 import { GlobalHeader } from "@/components/layout/GlobalHeader";
 import { MarketplaceSidebar } from "@/components/marketplace/MarketplaceSidebar";
 import { ActivityFeed } from "@/components/marketplace/ActivityFeed";
@@ -10,19 +10,29 @@ interface DashboardLayoutProps {
     activityMode?: 'market' | 'tasks';
 }
 
-export function DashboardLayout({ 
-    children, 
-    showSidebar = true, 
+export function DashboardLayout({
+    children,
+    showSidebar = true,
     showActivity = true,
     activityMode = 'market'
 }: DashboardLayoutProps) {
     return (
         <div className="min-h-screen bg-black text-gray-200 font-sans flex flex-col">
             <GlobalHeader />
-            
+
             <div className="flex flex-1 overflow-hidden h-[calc(100vh-73px)]">
                 {/* Left Sidebar */}
-                {showSidebar && <MarketplaceSidebar />}
+                {showSidebar && (
+                    <div className="flex-shrink-0">
+                        {/* 
+                            MarketplaceSidebar uses useSearchParams internally.
+                            We must wrap it in Suspense to avoid "missing suspense boundary" error during build.
+                        */}
+                        <Suspense fallback={<div className="w-64 h-full bg-black/20 animate-pulse" />}>
+                            <MarketplaceSidebar />
+                        </Suspense>
+                    </div>
+                )}
 
                 {/* Main Content Area */}
                 <main className="flex-1 overflow-y-auto bg-black/10 relative">

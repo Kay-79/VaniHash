@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useBids } from '@/hooks/useBids';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Label } from '@/components/ui/Label';
 
 export function BidModal({ itemType }: { itemType: string }) {
     const { createBid, isPending } = useBids();

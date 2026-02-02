@@ -39,7 +39,7 @@ export async function GET(request: NextRequest) {
         soldListings.forEach(item => {
             const buyer = item.buyer!;
             const price = BigInt(item.price_sold || '0');
-            volumeByBuyer[buyer] = (volumeByBuyer[buyer] || 0n) + price;
+            volumeByBuyer[buyer] = (volumeByBuyer[buyer] || BigInt(0)) + price;
         });
 
         const topTraders = Object.entries(volumeByBuyer)

@@ -9,7 +9,6 @@ export function useSubmitProof() {
     const submitProof = (
         taskId: string,
         minedObjectId: string,
-        objectType: string,
         onSuccess?: (result: any) => void,
         onError?: (error: any) => void
     ) => {
@@ -17,9 +16,10 @@ export function useSubmitProof() {
 
         const tx = new Transaction();
 
+        // Use generic type - the contract will accept any object with key + store
         tx.moveCall({
             target: `${PACKAGE_ID}::${MODULE_NAME}::submit_proof`,
-            typeArguments: [objectType],
+            typeArguments: ['0x2::coin::Coin<0x2::sui::SUI>'], // Default type, contract accepts any T: key + store
             arguments: [
                 tx.object(taskId),
                 tx.object(minedObjectId),

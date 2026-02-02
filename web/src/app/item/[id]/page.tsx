@@ -47,20 +47,22 @@ export default function ItemDetailPage() {
 
     const handleBuy = () => {
         if (!listing) return;
-        const match = listing.type.match(/<(.+)>/);
+        const match = listing.type.match(/\<(.+)\>/);
         if (!match) {
             toast.error("Could not determine item type");
             return;
         }
         const itemType = match[1];
 
+        // The buy function expects: (kioskId, itemId, itemType, priceMist, onSuccess, onError)
+        // For now, using listing_id as both kioskId and itemId (adjust based on your data structure)
         buy(
-            listing.listing_id,
-            itemType,
-            listing.price,
+            listing.seller,      // kioskId (seller's kiosk)
+            listing.listing_id,  // itemId
+            itemType,            // itemType
+            listing.price,       // priceMist
             () => {
                 toast.success("Item bought successfully!");
-                // Refresh?
                 window.location.reload();
             },
             (err) => toast.error("Failed to buy: " + err.message)
@@ -68,11 +70,11 @@ export default function ItemDetailPage() {
     };
 
     if (loading) return (
-            <DashboardLayout>
-                <div className="flex items-center justify-center h-96">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-                </div>
-            </DashboardLayout>
+        <DashboardLayout>
+            <div className="flex items-center justify-center h-96">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+            </div>
+        </DashboardLayout>
     );
 
     if (error || !listing) return (
@@ -83,7 +85,7 @@ export default function ItemDetailPage() {
 
     return (
         <DashboardLayout activityMode="market">
-             <div className="max-w-4xl mx-auto p-6 space-y-6">
+            <div className="max-w-4xl mx-auto p-6 space-y-6">
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold text-white">Item Details</h1>
                     <Badge variant="outline" className="text-sm">
@@ -92,34 +94,34 @@ export default function ItemDetailPage() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                     {/* Visual / Main */}
-                     <Card className="bg-gray-900 border-gray-800 flex items-center justify-center min-h-[300px]">
+                    {/* Visual / Main */}
+                    <Card className="bg-gray-900 border-gray-800 flex items-center justify-center min-h-[300px]">
                         <div className="text-center">
                             <Tag className="h-24 w-24 text-yellow-500 mx-auto mb-4 opacity-80" />
                             <h2 className="text-xl font-mono text-white break-all px-8">
                                 {listing.type.split('<')[1]?.replace('>', '') || 'Unknown Item'}
                             </h2>
                         </div>
-                     </Card>
+                    </Card>
 
-                     {/* Details */}
-                     <div className="space-y-6">
+                    {/* Details */}
+                    <div className="space-y-6">
                         <Card className="bg-gray-900/50 border-gray-800">
-                             <CardHeader>
+                            <CardHeader>
                                 <CardTitle className="text-gray-400 text-sm uppercase">Info</CardTitle>
-                             </CardHeader>
-                             <CardContent className="space-y-4">
+                            </CardHeader>
+                            <CardContent className="space-y-4">
                                 <div className="flex justify-between items-center p-3 bg-black/20 rounded">
-                                    <span className="text-gray-500 flex items-center gap-2"><User className="h-4 w-4"/> Seller</span>
+                                    <span className="text-gray-500 flex items-center gap-2"><User className="h-4 w-4" /> Seller</span>
                                     <span className="text-blue-400 font-mono text-sm truncate max-w-[150px]">{listing.seller}</span>
                                 </div>
                                 <div className="flex justify-between items-center p-3 bg-black/20 rounded">
-                                    <span className="text-gray-500 flex items-center gap-2"><Clock className="h-4 w-4"/> Listed At</span>
+                                    <span className="text-gray-500 flex items-center gap-2"><Clock className="h-4 w-4" /> Listed At</span>
                                     <span className="text-gray-300 text-sm">
                                         {new Date(Number(listing.timestamp_ms)).toLocaleDateString()}
                                     </span>
                                 </div>
-                             </CardContent>
+                            </CardContent>
                         </Card>
 
                         <Card className="bg-gray-900/50 border-gray-800">
@@ -128,8 +130,8 @@ export default function ItemDetailPage() {
                                 <p className="text-3xl font-bold text-white mb-6">
                                     {mistToSui(listing.price)} <span className="text-yellow-500 text-lg">SUI</span>
                                 </p>
-                                <Button 
-                                    size="lg" 
+                                <Button
+                                    size="lg"
                                     className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold"
                                     onClick={handleBuy}
                                     disabled={isPending || listing.status !== 'ACTIVE'}
@@ -139,9 +141,9 @@ export default function ItemDetailPage() {
                                 </Button>
                             </CardContent>
                         </Card>
-                     </div>
+                    </div>
                 </div>
-             </div>
+            </div>
         </DashboardLayout>
     );
 }

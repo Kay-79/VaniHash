@@ -32,17 +32,19 @@ export function ListingCard({ listing, onBuySuccess }: ListingCardProps) {
         // Parse type from event string "::marketplace::ItemListed<0x...>"
         // This is a bit hacky, ideally indexer stores inner type cleanly.
         // Format: ...ItemListed<TYPE>
-        const match = listing.type.match(/<(.+)>/);
+        const match = listing.type.match(/\<(.+)\>/);
         if (!match) {
             toast.error("Could not determine item type");
             return;
         }
         const itemType = match[1];
 
+        // The buy function expects: (kioskId, itemId, itemType, priceMist, onSuccess, onError)
         buy(
-            listing.listing_id,
-            itemType,
-            listing.price,
+            listing.seller,      // kioskId (seller's kiosk)
+            listing.listing_id,  // itemId
+            itemType,            // itemType
+            listing.price,       // priceMist
             () => {
                 toast.success("Item bought successfully!");
                 if (onBuySuccess) onBuySuccess();
@@ -61,7 +63,7 @@ export function ListingCard({ listing, onBuySuccess }: ListingCardProps) {
     };
 
     return (
-        <Card 
+        <Card
             className="cursor-pointer hover:border-yellow-500/50 transition-all"
             onClick={() => router.push(`/item/${listing.listing_id}`)}
         >
@@ -89,9 +91,9 @@ export function ListingCard({ listing, onBuySuccess }: ListingCardProps) {
                     <Button className="flex-1" onClick={handleBuy} disabled={isPending}>
                         {isPending ? "..." : "Buy"}
                     </Button>
-                    <Button 
-                        variant="secondary" 
-                        className="flex-1" 
+                    <Button
+                        variant="secondary"
+                        className="flex-1"
                         onClick={(e) => {
                             e.stopPropagation();
                             toast.info("Bidding not yet available");
