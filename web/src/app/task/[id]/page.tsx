@@ -11,10 +11,12 @@ import { AlertCircle } from 'lucide-react';
 import { SubmitProofDialog } from '@/components/marketplace/SubmitProofDialog';
 import { TaskStatusBadge } from '@/components/marketplace/TaskStatusBadge';
 import { shouldBeActive, isInGracePeriod, formatTimeRemaining, getGracePeriodRemaining } from '@/utils/gracePeriod';
+import { useCurrentAccount } from '@mysten/dapp-kit';
 
 export default function TaskDetailPage() {
     const params = useParams();
     const id = params.id as string;
+    const account = useCurrentAccount();
     const [task, setTask] = useState<Task | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -59,6 +61,8 @@ export default function TaskDetailPage() {
     const isActive = task.status === TaskStatus.ACTIVE || String(task.status) === 'ACTIVE' || shouldBeActive({ status: String(task.status), created_at: task.created_at || '' });
     const isCompleted = task.status === TaskStatus.COMPLETED || String(task.status) === 'COMPLETED';
     const inGracePeriod = isPending && task.created_at && isInGracePeriod(task.created_at);
+
+    const isCreator = account?.address === task.creator;
 
     return (
         <DashboardLayout activityMode="tasks">
@@ -130,7 +134,17 @@ export default function TaskDetailPage() {
                                 <CardTitle className="text-white">Action</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                {isActive ? (
+                                {isCreator ? (
+                                    <div className="p-4 bg-yellow-900/20 rounded text-center border border-yellow-500/20">
+                                        <h4 className="text-yellow-500 font-medium mb-1">You created this task</h4>
+                                        <p className="text-xs text-gray-400">
+                                            {inGracePeriod
+                                                ? "You can cancel this task during the grace period."
+                                                : "Waiting for miners to submit proof."}
+                                        </p>
+                                        {/* TODO: Add Cancel Button logic here if needed */}
+                                    </div>
+                                ) : isActive ? (
                                     <SubmitProofDialog taskId={task.task_id} onSuccess={fetchTask} />
                                 ) : (
                                     <div className="p-4 bg-gray-800/50 rounded text-center text-gray-400">

@@ -20,6 +20,7 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
     const [containsPattern, setContainsPattern] = useState('');
     const [reward, setReward] = useState('0.01');
     const [taskType, setTaskType] = useState<'object' | 'package'>('object');
+    const [startDelayMinutes, setStartDelayMinutes] = useState('0');
 
     // Validation errors
     const [prefixError, setPrefixError] = useState('');
@@ -65,12 +66,15 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
             // Note: Current contract accepts task_type parameter
             // 0 = OBJECT (regular object mining)
             // 1 = PACKAGE (package ID mining)
+            const lockDurationMs = Math.floor(Number(startDelayMinutes) * 60 * 1000);
+
             await createTask(
                 prefixPattern,
                 suffixPattern,
                 containsPattern,
                 taskType === 'package' ? 1 : 0,  // task_type parameter
                 reward,
+                lockDurationMs,
                 (result) => {
                     toast.success(`Task created successfully!`);
                     if (onTaskCreated) onTaskCreated();
@@ -78,6 +82,7 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
                     setPrefixPattern('');
                     setSuffixPattern('');
                     setContainsPattern('');
+                    setStartDelayMinutes('0');
                 },
                 (error) => {
                     toast.error("Failed to create task: " + (error as Error).message);
@@ -187,6 +192,21 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
                         onChange={(e) => setReward(e.target.value)}
                         className="mt-1 bg-black/40 border-gray-800 text-white placeholder:text-gray-600 focus:ring-blue-500/50"
                     />
+                </div>
+
+                <div>
+                    <Label htmlFor="delay" className="text-gray-400">Start Delay (Minutes)</Label>
+                    <Input
+                        id="delay"
+                        type="number"
+                        min="0"
+                        value={startDelayMinutes}
+                        onChange={(e) => setStartDelayMinutes(e.target.value)}
+                        className="mt-1 bg-black/40 border-gray-800 text-white placeholder:text-gray-600 focus:ring-blue-500/50"
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                        Grace period before mining can start (0 for immediate)
+                    </p>
                 </div>
 
                 <Button

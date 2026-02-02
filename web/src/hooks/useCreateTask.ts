@@ -12,8 +12,9 @@ export function useCreateTask() {
         prefix: string,
         suffix: string,
         contains: string,
-        taskType: number,  // 0 = object, 1 = package
+        taskType: number,
         rewardSui: string,
+        lockDurationMs: number = 0, // Default to 0
         onSuccess?: (result: any) => void,
         onError?: (error: any) => void
     ) => {
@@ -36,10 +37,10 @@ export function useCreateTask() {
                 tx.pure(bcs.vector(bcs.u8()).serialize(toBytes(suffix))),
                 tx.pure(bcs.vector(bcs.u8()).serialize(toBytes(contains))),
                 tx.pure.u8(taskType),  // task_type
-                tx.pure.u64(86400000), // 24h Lock
+                tx.pure.u64(lockDurationMs), // Configurable Lock
                 tx.object('0x6'), // Clock
             ],
-            typeArguments: ['0x2::coin::Coin<0x2::sui::SUI>'], // Hardcoded for now per user flow
+            typeArguments: ['0x2::coin::Coin<0x2::sui::SUI>'],
         });
 
         signAndExecute(
