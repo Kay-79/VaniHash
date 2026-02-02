@@ -19,7 +19,8 @@ export function TaskStatusBadge({
     onGracePeriodExpire
 }: TaskStatusBadgeProps) {
     const [remaining, setRemaining] = useState(getGracePeriodRemaining(createdAt));
-    const inGracePeriod = status === 'PENDING' && isInGracePeriod(createdAt);
+    // Force grace period check regardless of input status (unless Cancelled/Completed? Assuming Active/Pending are mostly affected)
+    const inGracePeriod = isInGracePeriod(createdAt);
 
     useEffect(() => {
         if (!inGracePeriod) return;
@@ -39,8 +40,8 @@ export function TaskStatusBadge({
         return () => clearInterval(interval);
     }, [inGracePeriod, createdAt, onGracePeriodExpire]);
 
-    // Display effective status
-    const effectiveStatus = status === 'PENDING' && !inGracePeriod ? 'ACTIVE' : status;
+    // Display effective status: If in grace period -> PENDING.
+    const effectiveStatus = inGracePeriod ? 'PENDING' : status;
 
     const getStatusColor = () => {
         switch (effectiveStatus) {

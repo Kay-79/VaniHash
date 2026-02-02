@@ -20,7 +20,20 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
     const [containsPattern, setContainsPattern] = useState('');
     const [reward, setReward] = useState('0.01');
     const [taskType, setTaskType] = useState<'object' | 'package'>('object');
-    const [startDelayMinutes, setStartDelayMinutes] = useState('0');
+    const [lockDurationHours, setLockDurationHours] = useState('24');
+    const [bytecode, setBytecode] = useState<Uint8Array>(new Uint8Array());
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            try {
+                const buffer = await file.arrayBuffer();
+                setBytecode(new Uint8Array(buffer));
+            } catch (err) {
+                toast.error('Failed to read file');
+            }
+        }
+    };
 
     // Validation errors
     const [prefixError, setPrefixError] = useState('');
@@ -66,7 +79,7 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
             // Note: Current contract accepts task_type parameter
             // 0 = OBJECT (regular object mining)
             // 1 = PACKAGE (package ID mining)
-            const lockDurationMs = Math.floor(Number(startDelayMinutes) * 60 * 1000);
+            const lockDurationMs = Math.floor(Number(lockDurationHours) * 60 * 60 * 1000);
 
             await createTask(
                 prefixPattern,
@@ -75,6 +88,7 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
                 taskType === 'package' ? 1 : 0,  // task_type parameter
                 reward,
                 lockDurationMs,
+                bytecode, // Pass bytecode
                 (result) => {
                     toast.success(`Task created successfully!`);
                     if (onTaskCreated) onTaskCreated();
@@ -82,7 +96,7 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
                     setPrefixPattern('');
                     setSuffixPattern('');
                     setContainsPattern('');
-                    setStartDelayMinutes('0');
+                    setLockDurationHours('24');
                 },
                 (error) => {
                     toast.error("Failed to create task: " + (error as Error).message);
@@ -114,6 +128,23 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
                         <option value="package">Package ID (Brand Identity)</option>
                     </select>
                 </div>
+
+                {/* Bytecode Upload (Only for Package) */}
+                {taskType === 'package' && (
+                    <div>
+                        <Label htmlFor="bytecode" className="text-gray-400">Package Bytecode (.mv)</Label>
+                        <Input
+                            id="bytecode"
+                            type="file"
+                            accept=".mv,.bin"
+                            onChange={handleFileChange}
+                            className="mt-1 bg-black/40 border-gray-800 text-white file:bg-blue-900 file:text-white file:border-0 file:rounded-md file:px-2 file:py-1 hover:file:bg-blue-800"
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                            Upload the compiled Move package bytecode to let miners know what logic to mine.
+                        </p>
+                    </div>
+                )}
 
                 <div className="space-y-3">
                     <p className="text-sm text-gray-400">
@@ -195,17 +226,17 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
                 </div>
 
                 <div>
-                    <Label htmlFor="delay" className="text-gray-400">Start Delay (Minutes)</Label>
+                    <Label htmlFor="lockDuration" className="text-gray-400">Lock Duration (Hours)</Label>
                     <Input
-                        id="delay"
+                        id="lockDuration"
                         type="number"
-                        min="0"
-                        value={startDelayMinutes}
-                        onChange={(e) => setStartDelayMinutes(e.target.value)}
+                        min="24"
+                        value={lockDurationHours}
+                        onChange={(e) => setLockDurationHours(e.target.value)}
                         className="mt-1 bg-black/40 border-gray-800 text-white placeholder:text-gray-600 focus:ring-blue-500/50"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                        Grace period before mining can start (0 for immediate)
+                        Time during which the task cannot be cancelled (Min: 24h). Miners can start after 15m grace period.
                     </p>
                 </div>
 

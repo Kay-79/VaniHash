@@ -1,20 +1,28 @@
 export const GRACE_PERIOD_MS = 15 * 60 * 1000; // 15 minutes
 
+function parseTimestamp(val: number | string): number {
+    if (typeof val === 'number') return val;
+    // Check if it's a numeric string (e.g. "1770051308381")
+    if (/^\d+$/.test(val)) return parseInt(val);
+    // Assume ISO string
+    return new Date(val).getTime();
+}
+
 export function isInGracePeriod(createdAt: number | string): boolean {
-    const created = typeof createdAt === 'string' ? parseInt(createdAt) : createdAt;
+    const created = parseTimestamp(createdAt);
     const now = Date.now();
     return now < created + GRACE_PERIOD_MS;
 }
 
 export function getGracePeriodRemaining(createdAt: number | string): number {
-    const created = typeof createdAt === 'string' ? parseInt(createdAt) : createdAt;
+    const created = parseTimestamp(createdAt);
     const expiresAt = created + GRACE_PERIOD_MS;
     const now = Date.now();
     return Math.max(0, expiresAt - now);
 }
 
 export function getGracePeriodExpiryTime(createdAt: number | string): number {
-    const created = typeof createdAt === 'string' ? parseInt(createdAt) : createdAt;
+    const created = parseTimestamp(createdAt);
     return created + GRACE_PERIOD_MS;
 }
 

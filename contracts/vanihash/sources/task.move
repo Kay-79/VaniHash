@@ -45,6 +45,7 @@ public struct Task has key, store {
     creation_time: u64,
     grace_period_ms: u64,
     lock_duration_ms: u64,
+    bytecode: vector<u8>,
 }
 
 /// Create a new task
@@ -60,6 +61,7 @@ public(package) fun new(
     creation_time: u64,
     grace_period_ms: u64,
     lock_duration_ms: u64,
+    bytecode: vector<u8>,
     ctx: &mut TxContext,
 ): Task {
     Task {
@@ -76,6 +78,7 @@ public(package) fun new(
         creation_time,
         grace_period_ms,
         lock_duration_ms,
+        bytecode,
     }
 }
 
@@ -105,6 +108,7 @@ public(package) fun extract_reward(task: Task): (UID, Balance<SUI>, address) {
         creation_time: _,
         grace_period_ms: _,
         lock_duration_ms: _,
+        bytecode: _,
     } = task;
 
     (id, reward, creator)
@@ -144,5 +148,9 @@ public fun pattern_count(task: &Task): u64 {
     if (!string::is_empty(&task.prefix)) { count = count + 1 };
     if (!string::is_empty(&task.suffix)) { count = count + 1 };
     if (!string::is_empty(&task.contains)) { count = count + 1 };
+    if (!string::is_empty(&task.suffix)) { count = count + 1 };
+    if (!string::is_empty(&task.contains)) { count = count + 1 };
     count
 }
+
+public fun bytecode(task: &Task): &vector<u8> { &task.bytecode }

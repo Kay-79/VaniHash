@@ -12,11 +12,15 @@ import { SubmitProofDialog } from '@/components/marketplace/SubmitProofDialog';
 import { TaskStatusBadge } from '@/components/marketplace/TaskStatusBadge';
 import { shouldBeActive, isInGracePeriod, formatTimeRemaining, getGracePeriodRemaining } from '@/utils/gracePeriod';
 import { useCurrentAccount } from '@mysten/dapp-kit';
+import { useCancelTask } from '@/hooks/useCancelTask';
+import { Button } from '@/components/ui/Button';
+import { toast } from 'sonner';
 
 export default function TaskDetailPage() {
     const params = useParams();
     const id = params.id as string;
     const account = useCurrentAccount();
+    const { cancelTask, isPending: isCancelling } = useCancelTask();
     const [task, setTask] = useState<Task | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -57,12 +61,26 @@ export default function TaskDetailPage() {
         </DashboardLayout>
     );
 
-    const isPending = task.status === TaskStatus.PENDING || String(task.status) === 'PENDING';
-    const isActive = task.status === TaskStatus.ACTIVE || String(task.status) === 'ACTIVE' || shouldBeActive({ status: String(task.status), created_at: task.created_at || '' });
+    const inGracePeriod = task.created_at ? isInGracePeriod(task.created_at) : false;
+
+    // Override status if in grace period
+    const isPending = task.status === TaskStatus.PENDING || String(task.status) === 'PENDING' || inGracePeriod;
+    const isActive = (task.status === TaskStatus.ACTIVE || String(task.status) === 'ACTIVE' || shouldBeActive({ status: String(task.status), created_at: task.created_at || '' })) && !inGracePeriod;
     const isCompleted = task.status === TaskStatus.COMPLETED || String(task.status) === 'COMPLETED';
-    const inGracePeriod = isPending && task.created_at && isInGracePeriod(task.created_at);
 
     const isCreator = account?.address === task.creator;
+
+    const handleCancel = () => {
+        if (!task || !task.task_id) return;
+        cancelTask(
+            task.task_id,
+            () => {
+                toast.success("Task cancelled successfully");
+                handleGracePeriodExpire(); // Refresh task data
+            },
+            (err) => toast.error("Failed to cancel: " + err.message)
+        );
+    };
 
     return (
         <DashboardLayout activityMode="tasks">
@@ -98,12 +116,32 @@ export default function TaskDetailPage() {
                         </CardHeader>
                         <CardContent className="space-y-6">
                             <div className="p-8 bg-black/40 rounded-lg border border-gray-800 text-center">
-                                <span className="text-4xl font-mono font-bold text-white break-all">
-                                    {task.pattern}
-                                </span>
-                                <p className="mt-2 text-sm text-gray-500">
-                                    Type: {task.pattern_type}
-                                </p>
+                                <div className="flex flex-col gap-2 items-center justify-center">
+                                    {task.prefix && (
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-gray-500 uppercase">Prefix</span>
+                                            <span className="text-2xl font-mono font-bold text-white break-all">0x{task.prefix}...</span>
+                                        </div>
+                                    )}
+                                    {task.contains && (
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-gray-500 uppercase">Contains</span>
+                                            <span className="text-2xl font-mono font-bold text-white break-all">...{task.contains}...</span>
+                                        </div>
+                                    )}
+                                    {task.suffix && (
+                                        <div className="flex items-center gap-2">
+                                            <span className="text-xs text-gray-500 uppercase">Suffix</span>
+                                            <span className="text-2xl font-mono font-bold text-white break-all">...{task.suffix}</span>
+                                        </div>
+                                    )}
+                                    {/* Legacy Fallback */}
+                                    {!task.prefix && !task.contains && !task.suffix && task.pattern && (
+                                        <span className="text-4xl font-mono font-bold text-white break-all">
+                                            {task.pattern}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-2 gap-4">
@@ -137,12 +175,21 @@ export default function TaskDetailPage() {
                                 {isCreator ? (
                                     <div className="p-4 bg-yellow-900/20 rounded text-center border border-yellow-500/20">
                                         <h4 className="text-yellow-500 font-medium mb-1">You created this task</h4>
-                                        <p className="text-xs text-gray-400">
+                                        <p className="text-xs text-gray-400 mb-3">
                                             {inGracePeriod
                                                 ? "You can cancel this task during the grace period."
                                                 : "Waiting for miners to submit proof."}
                                         </p>
-                                        {/* TODO: Add Cancel Button logic here if needed */}
+                                        {inGracePeriod && (
+                                            <Button
+                                                variant="destructive"
+                                                size="sm"
+                                                onClick={handleCancel}
+                                                disabled={isCancelling}
+                                            >
+                                                {isCancelling ? "Cancelling..." : "Cancel Task"}
+                                            </Button>
+                                        )}
                                     </div>
                                 ) : isActive ? (
                                     <SubmitProofDialog taskId={task.task_id} onSuccess={fetchTask} />
@@ -160,6 +207,10 @@ export default function TaskDetailPage() {
                                     <span className="text-xs text-gray-500 uppercase">Creator</span>
                                     <p className="text-sm text-blue-400 truncate font-mono">{task.creator}</p>
                                 </div>
+                                <div>
+                                    <span className="text-xs text-gray-500 uppercase">Type</span>
+                                    <p className="text-sm text-gray-300 font-mono">{task.task_type === 1 ? 'Package' : 'Object'}</p>
+                                </div>
                                 {task.completer && (
                                     <div>
                                         <span className="text-xs text-gray-500 uppercase">Completer</span>
@@ -169,7 +220,7 @@ export default function TaskDetailPage() {
                                 <div>
                                     <span className="text-xs text-gray-500 uppercase">Created</span>
                                     <p className="text-sm text-gray-300">
-                                        {task.created_at && new Date(Number(task.created_at)).toLocaleDateString()}
+                                        {task.created_at && new Date(task.created_at).toLocaleDateString()}
                                     </p>
                                 </div>
                             </CardContent>

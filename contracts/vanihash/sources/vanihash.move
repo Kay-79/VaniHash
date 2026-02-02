@@ -35,6 +35,7 @@ public entry fun create_task<T>(
     contains_bytes: vector<u8>,
     task_type: u8, // 0 = object, 1 = package
     lock_duration_ms: u64,
+    bytecode: vector<u8>,
     clock: &Clock,
     ctx: &mut TxContext,
 ) {
@@ -55,6 +56,11 @@ public entry fun create_task<T>(
         task_type == task::task_type_object() || task_type == task::task_type_package(),
         errors::invalid_pattern_type(),
     );
+
+    // Bytecode validation (basic check)
+    if (task_type == task::task_type_package()) {
+        assert!(!vector::is_empty(&bytecode), errors::invalid_proof()); // Reuse error or add invalid_bytecode
+    };
 
     let creation_time = clock::timestamp_ms(clock);
 
@@ -88,15 +94,13 @@ public entry fun create_task<T>(
         creation_time,
         DEFAULT_GRACE_PERIOD_MS,
         lock_duration_ms,
+        bytecode, // Pass bytecode
         ctx,
     );
 
     let task_id = object::uid_to_inner(task::id(&new_task));
 
-    // Emit event (construct vector for compatibility if needed, or update event?)
-    // Assuming event takes explicit fields now or we assume indexer handles it?
-    // Let's assume we stick to vector for event for now to avoid breaking indexer if possible,
-    // OR we update event to be explicit.
+    // Emit event
     events::emit_task_created(
         task_id,
         tx_context::sender(ctx),
@@ -108,6 +112,7 @@ public entry fun create_task<T>(
         *task::target_type(&new_task),
         difficulty,
         lock_duration_ms,
+        *task::bytecode(&new_task),
     );
 
     // Share the task object

@@ -16,9 +16,18 @@ export interface Task {
     task_id: string; // Object ID
     creator: string;
     reward_amount: string;
-    pattern: string;
+
+    // Pattern fields (one of these will be set)
+    prefix?: string;
+    suffix?: string;
+    contains?: string;
+
+    // Legacy/Computed fields (optional)
+    pattern?: string;
     pattern_type?: PatternType;
+
     target_type?: string;
+    task_type?: number; // 0 = Object, 1 = Package
     difficulty?: number;
     status: TaskStatus | string; // Allow string from API
     creation_time?: number;
@@ -48,7 +57,7 @@ export interface Listing {
     type: string; // Struct tag e.g. 0x...::miner::GasObject
     status: string;
     timestamp_ms: number;
-    
+
     // Enriched Data
     metadata?: {
         name?: string;

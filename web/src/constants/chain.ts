@@ -1,4 +1,4 @@
-export const PACKAGE_ID = '0x6f01b4f74af999bcd2729b8b1f0294f5e1f0d1bfc0d8bd1e768e5a1b3f32a1d1';
+export const PACKAGE_ID = '0xc9fb95f018b757caaafef1c92d88f5c4f39d629a6801ff2afaa1faf2c5042b38';
 export const MODULE_NAME = 'vanihash';
 export const INDEXER_URL = 'http://localhost:3000';
 export const NETWORK = 'testnet';

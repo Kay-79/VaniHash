@@ -28,6 +28,7 @@ export class EventParser {
                     tx_digest: txDigest,
                     timestamp_ms: timestampMs,
                     lock_duration_ms: parsedJson.lock_duration_ms ? BigInt(parsedJson.lock_duration_ms) : BigInt(0),
+                    bytecode: parsedJson.bytecode ? Buffer.from(parsedJson.bytecode).toString('base64') : null, // Convert u8[] to Base64
                 });
 
             } else if (eventType.includes('::TaskCompleted')) {

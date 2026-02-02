@@ -27,7 +27,10 @@ model Task {
   
   // New columns
   task_type     Int?     @default(0) // 0 = Object, 1 = Package
+  target_type   String?  // The expected object type (e.g. 0x2::coin::Coin<SUI>)
+  difficulty    Int?     @default(0)
   lock_duration_ms BigInt? @default(0)
+  bytecode      String?  // Base64 encoded bytecode
   
   status        String?
   completer     String?
