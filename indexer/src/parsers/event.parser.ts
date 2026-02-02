@@ -20,13 +20,14 @@ export class EventParser {
                     reward_amount: parsedJson.reward_amount,
                     prefix: parsedJson.prefix || '',
                     suffix: parsedJson.suffix || '',
-                    contain: parsedJson.contain || '',
-                    task_type: parsedJson.task_type === 1 ? 'PACKAGE' : 'OBJECT',
+                    contains: parsedJson.contain || '', // Map 'contain' (event) to 'contains' (DB)
+                    task_type: Number(parsedJson.task_type), // Schema expects Int
                     target_type: parsedJson.target_type,
                     difficulty: parsedJson.difficulty,
                     status: 'ACTIVE',
                     tx_digest: txDigest,
                     timestamp_ms: timestampMs,
+                    lock_duration_ms: parsedJson.lock_duration_ms ? BigInt(parsedJson.lock_duration_ms) : BigInt(0),
                 });
 
             } else if (eventType.includes('::TaskCompleted')) {

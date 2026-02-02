@@ -19,7 +19,16 @@ model Task {
   task_id       String   @unique
   creator       String?
   reward_amount String?
-  pattern       String?
+  
+  // Pattern fields
+  prefix        String?
+  suffix        String?
+  contains      String?
+  
+  // New columns
+  task_type     Int?     @default(0) // 0 = Object, 1 = Package
+  lock_duration_ms BigInt? @default(0)
+  
   status        String?
   completer     String?
   tx_digest     String?

@@ -107,6 +107,7 @@ public entry fun create_task<T>(
         task_type,
         *task::target_type(&new_task),
         difficulty,
+        lock_duration_ms,
     );
 
     // Share the task object

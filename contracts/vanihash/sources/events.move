@@ -16,6 +16,7 @@ public struct TaskCreated has copy, drop {
     task_type: u8,
     target_type: AsciiString,
     difficulty: u8,
+    lock_duration_ms: u64,
 }
 
 /// Emitted when a task is completed
@@ -41,6 +42,7 @@ public(package) fun emit_task_created(
     task_type: u8,
     target_type: AsciiString,
     difficulty: u8,
+    lock_duration_ms: u64,
 ) {
     event::emit(TaskCreated {
         task_id,
@@ -52,6 +54,7 @@ public(package) fun emit_task_created(
         task_type,
         target_type,
         difficulty,
+        lock_duration_ms,
     });
 }
 
