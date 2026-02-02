@@ -2,7 +2,7 @@
 module vanihash::task;
 
 use std::ascii::String as AsciiString;
-use std::string::String;
+use std::string::{Self, String};
 use sui::balance::{Self, Balance};
 use sui::sui::SUI;
 
@@ -35,8 +35,9 @@ public struct Task has key, store {
     id: UID,
     creator: address,
     reward: Balance<SUI>,
-    patterns: vector<String>,
-    pattern_type: u8,
+    prefix: String,
+    suffix: String,
+    contains: String,
     task_type: u8, // 0 = object, 1 = package
     target_type: AsciiString,
     difficulty: u8,
@@ -50,8 +51,9 @@ public struct Task has key, store {
 public(package) fun new(
     creator: address,
     reward: Balance<SUI>,
-    patterns: vector<String>,
-    pattern_type: u8,
+    prefix: String,
+    suffix: String,
+    contains: String,
     task_type: u8,
     target_type: AsciiString,
     difficulty: u8,
@@ -64,8 +66,9 @@ public(package) fun new(
         id: object::new(ctx),
         creator,
         reward,
-        patterns,
-        pattern_type,
+        prefix,
+        suffix,
+        contains,
         task_type,
         target_type,
         difficulty,
@@ -92,8 +95,9 @@ public(package) fun extract_reward(task: Task): (UID, Balance<SUI>, address) {
         id,
         creator,
         reward,
-        patterns: _,
-        pattern_type: _,
+        prefix: _,
+        suffix: _,
+        contains: _,
         task_type: _,
         target_type: _,
         difficulty: _,
@@ -106,56 +110,39 @@ public(package) fun extract_reward(task: Task): (UID, Balance<SUI>, address) {
     (id, reward, creator)
 }
 
-// === Getters ===
+// ===// Getter functions
+public fun id(task: &Task): &UID { &task.id }
 
-public fun id(task: &Task): &UID {
-    &task.id
-}
+public fun creator(task: &Task): address { task.creator }
 
-public fun creator(task: &Task): address {
-    task.creator
-}
+public fun reward(task: &Task): u64 { balance::value(&task.reward) }
 
-public fun reward_value(task: &Task): u64 {
-    balance::value(&task.reward)
-}
+public fun reward_mut(task: &mut Task): &mut Balance<SUI> { &mut task.reward }
 
-public fun patterns(task: &Task): &vector<String> {
-    &task.patterns
-}
+public fun prefix(task: &Task): &String { &task.prefix }
 
-public fun pattern_type(task: &Task): u8 {
-    task.pattern_type
-}
+public fun suffix(task: &Task): &String { &task.suffix }
 
-public fun target_type(task: &Task): &AsciiString {
-    &task.target_type
-}
+public fun contains(task: &Task): &String { &task.contains }
 
-public fun difficulty(task: &Task): u8 {
-    task.difficulty
-}
+public fun task_type(task: &Task): u8 { task.task_type }
 
-public fun status(task: &Task): u8 {
-    task.status
-}
+public fun target_type(task: &Task): &AsciiString { &task.target_type }
 
-public fun creation_time(task: &Task): u64 {
-    task.creation_time
-}
+public fun difficulty(task: &Task): u8 { task.difficulty }
 
-public fun grace_period_ms(task: &Task): u64 {
-    task.grace_period_ms
-}
+public fun status(task: &Task): u8 { task.status }
 
-public fun lock_duration_ms(task: &Task): u64 {
-    task.lock_duration_ms
-}
+public fun creation_time(task: &Task): u64 { task.creation_time }
+
+public fun grace_period_ms(task: &Task): u64 { task.grace_period_ms }
+
+public fun lock_duration_ms(task: &Task): u64 { task.lock_duration_ms }
 
 public fun pattern_count(task: &Task): u64 {
-    vector::length(&task.patterns)
-}
-
-public fun task_type(task: &Task): u8 {
-    task.task_type
+    let mut count = 0;
+    if (!string::is_empty(&task.prefix)) { count = count + 1 };
+    if (!string::is_empty(&task.suffix)) { count = count + 1 };
+    if (!string::is_empty(&task.contains)) { count = count + 1 };
+    count
 }

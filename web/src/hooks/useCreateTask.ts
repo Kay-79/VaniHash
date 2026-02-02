@@ -9,9 +9,10 @@ export function useCreateTask() {
     const { mutate: signAndExecute, isPending } = useSignAndExecuteTransaction();
 
     const createTask = (
-        patterns: string[],
-        patternType: number,
-        taskType: number,  // NEW: 0 = object, 1 = package
+        prefix: string,
+        suffix: string,
+        contains: string,
+        taskType: number,  // 0 = object, 1 = package
         rewardSui: string,
         onSuccess?: (result: any) => void,
         onError?: (error: any) => void
@@ -24,22 +25,17 @@ export function useCreateTask() {
 
         const encoder = new TextEncoder();
 
-        // Convert each pattern to bytes and build vector<vector<u8>>
-        const patternsBytes = patterns.map(pattern => {
-            const bytes = encoder.encode(pattern);
-            return Array.from(bytes);
-        });
-
-        // Serialize using BCS
-        const serializedPatterns = bcs.vector(bcs.vector(bcs.u8())).serialize(patternsBytes);
+        // Helper to convert string to bytes or empty array
+        const toBytes = (str: string) => str ? Array.from(encoder.encode(str)) : [];
 
         tx.moveCall({
             target: `${PACKAGE_ID}::${MODULE_NAME}::create_task`,
             arguments: [
                 coin,
-                tx.pure(serializedPatterns),
-                tx.pure.u8(patternType),
-                tx.pure.u8(taskType),  // NEW: task_type parameter
+                tx.pure(bcs.vector(bcs.u8()).serialize(toBytes(prefix))),
+                tx.pure(bcs.vector(bcs.u8()).serialize(toBytes(suffix))),
+                tx.pure(bcs.vector(bcs.u8()).serialize(toBytes(contains))),
+                tx.pure.u8(taskType),  // task_type
                 tx.pure.u64(86400000), // 24h Lock
                 tx.object('0x6'), // Clock
             ],

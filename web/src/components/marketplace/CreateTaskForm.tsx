@@ -66,12 +66,13 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
             // 0 = OBJECT (regular object mining)
             // 1 = PACKAGE (package ID mining)
             await createTask(
-                patterns,
-                2, // CONTAINS type - most flexible for mixed patterns
-                taskType === 'package' ? 1 : 0,  // NEW: task_type parameter
+                prefixPattern,
+                suffixPattern,
+                containsPattern,
+                taskType === 'package' ? 1 : 0,  // task_type parameter
                 reward,
                 (result) => {
-                    toast.success(`Task created with ${patterns.length} pattern(s)!`);
+                    toast.success(`Task created successfully!`);
                     if (onTaskCreated) onTaskCreated();
                     // Reset form
                     setPrefixPattern('');

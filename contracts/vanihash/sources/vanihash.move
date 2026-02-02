@@ -27,10 +27,12 @@ fun init(ctx: &mut TxContext) {
 }
 
 /// Create a new mining task
+/// Create a new mining task
 public entry fun create_task<T>(
     payment: Coin<SUI>,
-    patterns_bytes: vector<vector<u8>>,
-    pattern_type: u8,
+    prefix_bytes: vector<u8>,
+    suffix_bytes: vector<u8>,
+    contains_bytes: vector<u8>,
     task_type: u8, // 0 = object, 1 = package
     lock_duration_ms: u64,
     clock: &Clock,
@@ -38,12 +40,17 @@ public entry fun create_task<T>(
 ) {
     // Validate inputs
     let value = coin::value(&payment);
-    let pattern_count = vector::length(&patterns_bytes);
+
+    // Ensure at least one pattern is provided
+    assert!(
+        !vector::is_empty(&prefix_bytes) || 
+        !vector::is_empty(&suffix_bytes) || 
+        !vector::is_empty(&contains_bytes),
+        errors::invalid_pattern(),
+    );
 
     assert!(value > 0, errors::insufficient_reward());
-    assert!(pattern_count > 0 && pattern_count <= MAX_PATTERNS, errors::invalid_pattern());
     assert!(lock_duration_ms >= MIN_LOCK_PERIOD_MS, errors::lockup_too_short());
-    assert!(pattern::validate_pattern_type(pattern_type), errors::invalid_pattern_type());
     assert!(
         task_type == task::task_type_object() || task_type == task::task_type_package(),
         errors::invalid_pattern_type(),
@@ -52,15 +59,16 @@ public entry fun create_task<T>(
     let creation_time = clock::timestamp_ms(clock);
 
     // Convert pattern bytes to Strings and validate
-    let mut patterns = vector::empty<String>();
-    let mut i = 0;
+    let prefix_str = string::utf8(prefix_bytes);
+    let suffix_str = string::utf8(suffix_bytes);
+    let contains_str = string::utf8(contains_bytes);
 
-    while (i < pattern_count) {
-        let pattern_str = string::utf8(*vector::borrow(&patterns_bytes, i));
-        assert!(pattern::validate_pattern(&pattern_str), errors::invalid_pattern());
-        vector::push_back(&mut patterns, pattern_str);
-        i = i + 1;
-    };
+    if (!string::is_empty(&prefix_str))
+        assert!(pattern::validate_pattern(&prefix_str), errors::invalid_pattern());
+    if (!string::is_empty(&suffix_str))
+        assert!(pattern::validate_pattern(&suffix_str), errors::invalid_pattern());
+    if (!string::is_empty(&contains_str))
+        assert!(pattern::validate_pattern(&contains_str), errors::invalid_pattern());
 
     // Get target type and calculate difficulty
     let target_type = type_name::get<T>();
@@ -71,8 +79,9 @@ public entry fun create_task<T>(
     let new_task = task::new(
         tx_context::sender(ctx),
         coin::into_balance(payment),
-        patterns,
-        pattern_type,
+        prefix_str,
+        suffix_str,
+        contains_str,
         task_type,
         target_type_str,
         difficulty,
@@ -84,24 +93,17 @@ public entry fun create_task<T>(
 
     let task_id = object::uid_to_inner(task::id(&new_task));
 
-    // Extract individual patterns (empty string if not provided)
-    let prefix_pattern = if (vector::length(&patterns) > 0) { *vector::borrow(&patterns, 0) } else {
-        string::utf8(b"")
-    };
-    let suffix_pattern = if (vector::length(&patterns) > 1) { *vector::borrow(&patterns, 1) } else {
-        string::utf8(b"")
-    };
-    let contain_pattern = if (vector::length(&patterns) > 2) { *vector::borrow(&patterns, 2) }
-    else { string::utf8(b"") };
-
-    // Emit event
+    // Emit event (construct vector for compatibility if needed, or update event?)
+    // Assuming event takes explicit fields now or we assume indexer handles it?
+    // Let's assume we stick to vector for event for now to avoid breaking indexer if possible,
+    // OR we update event to be explicit.
     events::emit_task_created(
         task_id,
         tx_context::sender(ctx),
         value,
-        prefix_pattern,
-        suffix_pattern,
-        contain_pattern,
+        *task::prefix(&new_task),
+        *task::suffix(&new_task),
+        *task::contains(&new_task),
         task_type,
         *task::target_type(&new_task),
         difficulty,
@@ -180,11 +182,13 @@ public fun submit_proof<T: key + store>(
     );
 
     // Verify pattern match using pattern module
+    // Verify pattern match
     assert!(
         pattern::verify_pattern(
             &object_id,
-            task::patterns(&task_obj),
-            task::pattern_type(&task_obj),
+            task::prefix(&task_obj),
+            task::suffix(&task_obj),
+            task::contains(&task_obj),
         ),
         errors::invalid_proof(),
     );
@@ -246,8 +250,9 @@ public fun submit_package_proof(
     assert!(
         pattern::verify_pattern(
             &package_id,
-            task::patterns(&task_obj),
-            task::pattern_type(&task_obj),
+            task::prefix(&task_obj),
+            task::suffix(&task_obj),
+            task::contains(&task_obj),
         ),
         errors::invalid_proof(),
     );
@@ -272,4 +277,16 @@ public fun submit_package_proof(
         tx_context::sender(ctx),
         package_id,
     );
+}
+
+/// Helper View Function for Miners
+/// Allows verifying if a pre-computed Package ID matches the task pattern
+/// BEFORE spending gas to publish the package.
+public fun verify_package_id_pattern(task_obj: &Task, package_id: address): bool {
+    pattern::verify_pattern(
+        &object::id_from_address(package_id),
+        task::prefix(task_obj),
+        task::suffix(task_obj),
+        task::contains(task_obj),
+    )
 }

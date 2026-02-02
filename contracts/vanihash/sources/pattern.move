@@ -5,23 +5,6 @@ use std::string::{Self, String};
 use std::vector;
 use vanihash::errors;
 
-/// Pattern type constants
-const PATTERN_TYPE_PREFIX: u8 = 0;
-const PATTERN_TYPE_SUFFIX: u8 = 1;
-const PATTERN_TYPE_CONTAINS: u8 = 2;
-
-// Public getters
-public fun pattern_type_prefix(): u8 { PATTERN_TYPE_PREFIX }
-
-public fun pattern_type_suffix(): u8 { PATTERN_TYPE_SUFFIX }
-
-public fun pattern_type_contains(): u8 { PATTERN_TYPE_CONTAINS }
-
-/// Validate that pattern type is valid
-public fun validate_pattern_type(pattern_type: u8): bool {
-    pattern_type <= PATTERN_TYPE_CONTAINS
-}
-
 /// Validate that pattern contains only valid hex characters
 public fun validate_pattern(pattern: &String): bool {
     let bytes = string::bytes(pattern);
@@ -42,37 +25,29 @@ public fun validate_pattern(pattern: &String): bool {
     true
 }
 
-/// Verify if the object ID matches any of the patterns
-public fun verify_pattern(id: &ID, patterns: &vector<String>, pattern_type: u8): bool {
+/// Verify if the object ID matches ALL provided patterns (AND logic)
+/// Empty patterns are ignored (always match)
+public fun verify_pattern(id: &ID, prefix: &String, suffix: &String, contains: &String): bool {
     let id_bytes = object::id_to_bytes(id);
     let hex_string = id_to_hex_string(&id_bytes);
     let id_str_bytes = string::bytes(&hex_string);
 
-    let len = vector::length(patterns);
-    let mut i = 0;
-
-    while (i < len) {
-        let pattern = vector::borrow(patterns, i);
-        let pattern_bytes = string::bytes(pattern);
-
-        let matches = if (pattern_type == PATTERN_TYPE_PREFIX) {
-            starts_with(id_str_bytes, pattern_bytes)
-        } else if (pattern_type == PATTERN_TYPE_SUFFIX) {
-            ends_with(id_str_bytes, pattern_bytes)
-        } else if (pattern_type == PATTERN_TYPE_CONTAINS) {
-            contains(id_str_bytes, pattern_bytes)
-        } else {
-            false
-        };
-
-        if (matches) {
-            return true
-        };
-
-        i = i + 1;
+    // Check Prefix
+    if (!string::is_empty(prefix)) {
+        if (!starts_with(id_str_bytes, string::bytes(prefix))) return false;
     };
 
-    false
+    // Check Suffix
+    if (!string::is_empty(suffix)) {
+        if (!ends_with(id_str_bytes, string::bytes(suffix))) return false;
+    };
+
+    // Check Contains
+    if (!string::is_empty(contains)) {
+        if (!contains(id_str_bytes, string::bytes(contains))) return false;
+    };
+
+    true
 }
 
 /// Converts 32-byte ID to 64-char lowercase hex string
