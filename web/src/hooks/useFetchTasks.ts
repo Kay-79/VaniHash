@@ -2,10 +2,18 @@ import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Task } from '@/types';
 
-export function useFetchTasks() {
+export type UseFetchTasksOptions = {
+    creator?: string;
+    status?: string; // 'ALL' or comma strings
+    limit?: number;
+};
+
+export function useFetchTasks(options?: UseFetchTasksOptions) {
     const searchParams = useSearchParams();
     const search = searchParams.get('search');
-    const status = searchParams.get('status');
+    // Allow options to override URL params, but prioritize options if provided
+    const statusParam = options?.status || searchParams.get('status');
+    const creatorParam = options?.creator;
 
     const [tasks, setTasks] = useState<Task[]>([]);
     const [loading, setLoading] = useState(false);
@@ -14,9 +22,10 @@ export function useFetchTasks() {
     const fetchTasks = useCallback(async () => {
         setLoading(true);
         try {
-            const query = new URLSearchParams({ limit: '20' });
+            const query = new URLSearchParams({ limit: options?.limit?.toString() || '20' });
             if (search) query.set('search', search);
-            if (status && status !== 'ALL') query.set('status', status);
+            if (statusParam && statusParam !== 'ALL') query.set('status', statusParam);
+            if (creatorParam) query.set('creator', creatorParam);
 
             const res = await fetch(`/api/tasks?${query.toString()}`);
 
@@ -38,7 +47,7 @@ export function useFetchTasks() {
         } finally {
             setLoading(false);
         }
-    }, [search, status]);
+    }, [search, statusParam, creatorParam, options?.limit]);
 
     useEffect(() => {
         fetchTasks();

@@ -5,11 +5,23 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
     const status = searchParams.get('status');
     const search = searchParams.get('search');
+    const creator = searchParams.get('creator');
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
 
     try {
-        const where: any = status ? { status } : {};
+        const where: any = {};
+
+        if (status && status !== 'ALL') {
+            // Support comma-separated statuses e.g. "ACTIVE,PENDING"
+            const statuses = status.split(',');
+            where.status = { in: statuses };
+        }
+
+        if (creator) {
+            where.creator = creator;
+        }
+
         if (search) {
             where.OR = [
                 { pattern: { contains: search, mode: 'insensitive' } },

@@ -108,15 +108,6 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
                         <option value="object">Object ID (NFT, Coin, Gas Object, etc.)</option>
                         <option value="package">Package ID (Brand Identity)</option>
                     </select>
-                    {taskType === 'package' && (
-                        <p className="text-xs text-yellow-400 mt-2 flex items-start gap-2">
-                            <span>⚠️</span>
-                            <span>
-                                Package mining requires repeatedly publishing packages. Miners will submit the UpgradeCap.
-                                This is expensive (~0.5 SUI per attempt) - set a high reward!
-                            </span>
-                        </p>
-                    )}
                 </div>
 
                 <div className="space-y-3">

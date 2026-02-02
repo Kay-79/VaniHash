@@ -8,73 +8,73 @@ import { useFetchTasks } from '@/hooks/useFetchTasks';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { LayoutGrid, List, ArrowUpDown, Filter } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useCurrentAccount } from '@mysten/dapp-kit';
 import { MinerStats } from '@/components/miner/MinerStats';
 
 function HomeContent() {
-    const { tasks, loading, refetch } = useFetchTasks();
+    const account = useCurrentAccount();
     const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
     const [sortBy, setSortBy] = useState<'time' | 'reward'>('time');
 
-    const router = useRouter();
-    const pathname = usePathname();
-    const searchParams = useSearchParams();
-    const statusFilter = searchParams.get('status') || 'ALL';
+    // Tab State: 'market' | 'my_tasks' | 'history'
+    const [activeTab, setActiveTab] = useState('market');
 
-    const handleStatusChange = (newStatus: string) => {
-        const params = new URLSearchParams(searchParams.toString());
-        if (newStatus && newStatus !== 'ALL') {
-            params.set('status', newStatus);
-        } else {
-            params.delete('status');
-        }
-        router.replace(`${pathname}?${params.toString()}`);
-    };
+    // Derived filters based on tab
+    const fetchOptions = {
+        market: { status: 'ACTIVE,PENDING', creator: undefined },
+        my_tasks: { creator: account?.address, status: undefined },
+        history: { status: 'COMPLETED,CANCELLED', creator: undefined }
+    }[activeTab] || {};
+
+    const { tasks, loading, refetch } = useFetchTasks(fetchOptions);
 
     // Sorting Logic
     const sortedTasks = [...(tasks || [])].sort((a, b) => {
         if (sortBy === 'reward') {
             return parseFloat(b.reward_amount) - parseFloat(a.reward_amount);
         }
-        // Default time (assuming id or created_at logic, using ID as proxy for now since created_at might be missing in mock/simple type)
-        // Ideally use b.created_at - a.created_at if available.
-        // If tasks come from contract, higher ID usually means newer.
         return Number(b.id) - Number(a.id);
     });
 
     return (
         <DashboardLayout activityMode="tasks">
             <div className="p-6 space-y-6">
-                {/* Miner Stats Section */}
-                <MinerStats />
-
-                {/* Create Task Section */}
-                <CreateTaskForm onTaskCreated={() => {
-                    setTimeout(refetch, 2000);
-                }} />
-
                 {/* Task Feed */}
                 <div>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
-                        <h2 className="text-xl font-bold text-white">Active Job Requests</h2>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
+                        {/* Tabs */}
+                        <div className="flex bg-gray-900/50 p-1 rounded-xl border border-gray-800 w-fit">
+                            <button
+                                onClick={() => setActiveTab('market')}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'market'
+                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
+                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                    }`}
+                            >
+                                Market
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('my_tasks')}
+                                disabled={!account}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'my_tasks'
+                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
+                                    : 'text-gray-400 hover:text-white hover:bg-white/5 disabled:opacity-50 disabled:cursor-not-allowed'
+                                    }`}
+                            >
+                                My Tasks
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('history')}
+                                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${activeTab === 'history'
+                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
+                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                                    }`}
+                            >
+                                History
+                            </button>
+                        </div>
 
                         <div className="flex items-center gap-3">
-                            {/* Status Filter */}
-                            <div className="flex items-center gap-2 bg-gray-900/50 p-1 rounded-lg border border-gray-800">
-                                <Filter className="h-4 w-4 text-gray-500 ml-2" />
-                                <select
-                                    value={statusFilter}
-                                    onChange={(e) => handleStatusChange(e.target.value)}
-                                    className="bg-transparent text-sm text-gray-300 border-none focus:ring-0 cursor-pointer pr-4 uppercase"
-                                >
-                                    <option value="ALL">All Status</option>
-                                    <option value="PENDING">Pending</option>
-                                    <option value="ACTIVE">Active</option>
-                                    <option value="COMPLETED">Completed</option>
-                                    <option value="CANCELLED">Cancelled</option>
-                                </select>
-                            </div>
-
                             {/* Sort Control */}
                             <div className="flex items-center gap-2 bg-gray-900/50 p-1 rounded-lg border border-gray-800">
                                 <ArrowUpDown className="h-4 w-4 text-gray-500 ml-2" />

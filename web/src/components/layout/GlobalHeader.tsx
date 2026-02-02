@@ -60,6 +60,18 @@ export function GlobalHeader() {
                     >
                         Leaderboard
                     </Link>
+                    <Link
+                        href="/create"
+                        className={cn("transition-colors hover:text-white", isActive('/create') ? "text-yellow-500 font-bold" : "")}
+                    >
+                        Create
+                    </Link>
+                    <Link
+                        href="/miner"
+                        className={cn("transition-colors hover:text-white", isActive('/miner') ? "text-yellow-500 font-bold" : "")}
+                    >
+                        Miner
+                    </Link>
                     {showAdminLink && (
                         <Link
                             href="/admin"
