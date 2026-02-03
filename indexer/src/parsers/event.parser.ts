@@ -34,7 +34,7 @@ export class EventParser {
             } else if (eventType.includes('::TaskCompleted')) {
                 await this.db.updateTask(parsedJson.task_id, {
                     status: 'COMPLETED',
-                    completer: parsedJson.solver || parsedJson.completer,
+                    completer: parsedJson.solver || parsedJson.completer || parsedJson.miner,
                     tx_digest: txDigest,
                     timestamp_ms: timestampMs
                 });

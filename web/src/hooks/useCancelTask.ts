@@ -1,6 +1,6 @@
 import { useSignAndExecuteTransaction, useCurrentAccount } from '@mysten/dapp-kit';
 import { Transaction } from '@mysten/sui/transactions';
-import { PACKAGE_ID, MODULE_NAME } from '@/constants/chain';
+import { VANIHASH_PACKAGE_ID, MODULE_NAME } from '@/constants/chain';
 
 export function useCancelTask() {
     const account = useCurrentAccount();
@@ -16,7 +16,7 @@ export function useCancelTask() {
         const tx = new Transaction();
 
         tx.moveCall({
-            target: `${PACKAGE_ID}::${MODULE_NAME}::cancel_task`,
+            target: `${VANIHASH_PACKAGE_ID}::${MODULE_NAME}::cancel_task`,
             arguments: [
                 tx.object(taskId),
                 tx.object('0x6'), // Clock

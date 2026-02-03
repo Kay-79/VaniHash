@@ -15,7 +15,7 @@ datasource db {
 }
 
 model Task {
-  id            BigInt   @id @default(autoincrement())
+  id            String   @id @default(uuid())
   task_id       String   @unique
   creator       String?
   reward_amount String?
@@ -42,7 +42,7 @@ model Task {
 }
 
 model Listing {
-  id           BigInt   @id @default(autoincrement())
+  id           String   @id @default(uuid())
   listing_id   String   @unique
   seller       String?
   price        String?

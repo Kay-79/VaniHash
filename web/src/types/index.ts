@@ -35,6 +35,7 @@ export interface Task {
     lock_duration_ms?: number;
     timestamp_ms?: number;
     completer?: string;
+    miner?: string; // Alias for completer
     created_at?: string;
 
     // Blockchain Identifiers

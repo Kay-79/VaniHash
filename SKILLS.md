@@ -38,7 +38,7 @@ All source code resides in `src/`. Follow this directory structure strictly:
 -   **Hooks:** `camelCase` starting with `use` (e.g., `useMarketplace.ts`).
 -   **Functions/Variables:** `camelCase` (e.g., `shortenAddress`, `isLoading`).
 -   **Types/Interfaces:** `PascalCase` (e.g., `ListingItem`, `AccountProps`).
--   **Constants:** `UPPER_SNAKE_CASE` (e.g., `PACKAGE_ID`, `MAX_RETRIES`).
+-   **Constants:** `UPPER_SNAKE_CASE` (e.g., `VANIHASH_PACKAGE_ID`, `MAX_RETRIES`).
 
 ### Component Patterns
 -   **Functional Components ONLY.** Do not use Class components.

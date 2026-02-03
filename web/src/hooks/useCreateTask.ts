@@ -1,7 +1,7 @@
 import { useSignAndExecuteTransaction, useCurrentAccount } from '@mysten/dapp-kit';
 import { Transaction } from '@mysten/sui/transactions';
 import { bcs } from '@mysten/sui/bcs';
-import { PACKAGE_ID, MODULE_NAME } from '@/constants/chain';
+import { VANIHASH_PACKAGE_ID, MODULE_NAME } from '@/constants/chain';
 import { suiToMist } from '@/utils/formatters';
 
 export function useCreateTask() {
@@ -31,7 +31,7 @@ export function useCreateTask() {
         const toBytes = (str: string) => str ? Array.from(encoder.encode(str)) : [];
 
         tx.moveCall({
-            target: `${PACKAGE_ID}::${MODULE_NAME}::create_task`,
+            target: `${VANIHASH_PACKAGE_ID}::${MODULE_NAME}::create_task`,
             arguments: [
                 coin,
                 tx.pure(bcs.vector(bcs.u8()).serialize(toBytes(prefix))),

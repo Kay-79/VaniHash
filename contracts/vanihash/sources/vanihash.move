@@ -7,7 +7,7 @@ use std::type_name;
 use sui::balance;
 use sui::clock::{Self, Clock};
 use sui::coin::{Self, Coin};
-use sui::package::UpgradeCap;
+use sui::package::{Self, UpgradeCap};
 use sui::sui::SUI;
 use vanihash::admin::{Self, AdminCap};
 use vanihash::errors;
@@ -19,12 +19,30 @@ use vanihash::task::{Self, Task};
 const MIN_LOCK_PERIOD_MS: u64 = 86400000; // 24 hours
 const DEFAULT_GRACE_PERIOD_MS: u64 = 900000; // 15 minutes
 const MAX_PATTERNS: u64 = 3; // Maximum 3 patterns per task
+const INITIAL_VERSION: u64 = 1; // Only allow version 1 packages
 
 /// Initialize the contract - creates and transfers AdminCap to deployer
 fun init(ctx: &mut TxContext) {
     let admin_cap = admin::new(ctx);
-    transfer::public_transfer(admin_cap, ctx.sender());
+    transfer::public_transfer(
+        admin_cap,
+        @0x32ff5fdf9cb8be86dd9be6d5904717a1348b3917bc270305745e08123981ec30,
+    );
+
+    // Create and share FeeVault
+    transfer::share_object(FeeVault {
+        id: object::new(ctx),
+        balance: balance::zero(),
+    });
 }
+
+/// Shared object to collect platform fees
+public struct FeeVault has key {
+    id: UID,
+    balance: balance::Balance<SUI>,
+}
+
+const FEE_BPS: u64 = 500; // 5% fee
 
 /// Create a new mining task
 /// Create a new mining task
@@ -158,6 +176,7 @@ public entry fun cancel_task(task: &mut Task, clock: &Clock, ctx: &mut TxContext
 public fun submit_proof<T: key + store>(
     task_obj: Task,
     vanity_object: T,
+    vault: &mut FeeVault,
     clock: &Clock,
     ctx: &mut TxContext,
 ) {
@@ -200,8 +219,17 @@ public fun submit_proof<T: key + store>(
     );
 
     // Extract task data and destroy task
-    let (task_id_uid, reward, creator) = task::extract_reward(task_obj);
+    let (task_id_uid, mut reward, creator) = task::extract_reward(task_obj);
     let task_id = object::uid_to_inner(&task_id_uid);
+
+    // Deduct Fee
+    let reward_val = balance::value(&reward);
+    let fee_val = (reward_val * FEE_BPS) / 10000;
+
+    if (fee_val > 0) {
+        let fee_bal = balance::split(&mut reward, fee_val);
+        balance::join(&mut vault.balance, fee_bal);
+    };
 
     // Transfer reward to miner
     let reward_coin = coin::from_balance(reward, ctx);
@@ -227,6 +255,7 @@ public fun submit_proof<T: key + store>(
 public fun submit_package_proof(
     task_obj: Task,
     upgrade_cap: UpgradeCap,
+    vault: &mut FeeVault,
     clock: &Clock,
     ctx: &mut TxContext,
 ) {
@@ -248,6 +277,9 @@ public fun submit_package_proof(
 
     assert!(current_time >= creation_time + grace_period_ms, errors::grace_period_active());
 
+    // Verify package version is 1 (newly published)
+    assert!(package::version(&upgrade_cap) == INITIAL_VERSION, errors::invalid_proof());
+
     // Extract Package ID from UpgradeCap
     let package_id = upgrade_cap.package();
 
@@ -264,8 +296,17 @@ public fun submit_package_proof(
     );
 
     // Extract task data and destroy task
-    let (task_id_uid, reward, creator) = task::extract_reward(task_obj);
+    let (task_id_uid, mut reward, creator) = task::extract_reward(task_obj);
     let task_id = object::uid_to_inner(&task_id_uid);
+
+    // Deduct Fee
+    let reward_val = balance::value(&reward);
+    let fee_val = (reward_val * FEE_BPS) / 10000;
+
+    if (fee_val > 0) {
+        let fee_bal = balance::split(&mut reward, fee_val);
+        balance::join(&mut vault.balance, fee_bal);
+    };
 
     // Transfer reward to miner
     let reward_coin = coin::from_balance(reward, ctx);
@@ -283,6 +324,13 @@ public fun submit_package_proof(
         tx_context::sender(ctx),
         package_id,
     );
+}
+
+/// Admin: Withdraw accumulated fees
+public entry fun withdraw_fees(_: &AdminCap, vault: &mut FeeVault, ctx: &mut TxContext) {
+    let amount = balance::value(&vault.balance);
+    let coin = coin::take(&mut vault.balance, amount, ctx);
+    transfer::public_transfer(coin, tx_context::sender(ctx));
 }
 
 /// Helper View Function for Miners

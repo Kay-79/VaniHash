@@ -15,7 +15,7 @@ To enable Kiosk trading, you must create a `TransferPolicy` for your Type `T`.
 # Obtain a Publisher capability (usually from your package init)
 # Call transfer_policy::new
 sui client call --package 0x2 --module transfer_policy --function new \
- --type-args <PACKAGE_ID>::<MODULE>::<TYPE> \
+ --type-args <VANIHASH_PACKAGE_ID>::<MODULE>::<TYPE> \
  --args <PUBLISHER_ID>
 ```
 
@@ -26,7 +26,7 @@ Configure the `royalty_rule` for your policy.
 ```bash
 # amount_bp: 500 = 5%
 sui client call --package <MARKET_PACKAGE_ID> --module royalty_rule --function add \
- --type-args <PACKAGE_ID>::<MODULE>::<TYPE> \
+ --type-args <VANIHASH_PACKAGE_ID>::<MODULE>::<TYPE> \
  --args <POLICY_ID> <POLICY_CAP_ID> 500 <BENEFICIARY_ADDRESS>
 ```
 

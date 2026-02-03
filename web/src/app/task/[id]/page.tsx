@@ -63,10 +63,12 @@ export default function TaskDetailPage() {
 
     const inGracePeriod = task.created_at ? isInGracePeriod(task.created_at) : false;
 
-    // Override status if in grace period
-    const isPending = task.status === TaskStatus.PENDING || String(task.status) === 'PENDING' || inGracePeriod;
-    const isActive = (task.status === TaskStatus.ACTIVE || String(task.status) === 'ACTIVE' || shouldBeActive({ status: String(task.status), created_at: task.created_at || '' })) && !inGracePeriod;
+    // Override status if in grace period, but respect final states
     const isCompleted = task.status === TaskStatus.COMPLETED || String(task.status) === 'COMPLETED';
+    const isCancelled = task.status === TaskStatus.CANCELLED || String(task.status) === 'CANCELLED';
+
+    const isPending = !isCompleted && !isCancelled && (task.status === TaskStatus.PENDING || String(task.status) === 'PENDING' || inGracePeriod);
+    const isActive = !isCompleted && !isCancelled && !inGracePeriod && (task.status === TaskStatus.ACTIVE || String(task.status) === 'ACTIVE' || shouldBeActive({ status: String(task.status), created_at: task.created_at || '' }));
 
     const isCreator = account?.address === task.creator;
 

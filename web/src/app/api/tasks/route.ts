@@ -41,7 +41,13 @@ export async function GET(request: NextRequest) {
             typeof value === 'bigint' ? value.toString() : value
         ));
 
-        return NextResponse.json(serialized);
+        // Add miner alias for each task
+        const enriched = serialized.map((t: any) => ({
+            ...t,
+            miner: t.completer
+        }));
+
+        return NextResponse.json(enriched);
     } catch (e) {
         console.error("API /api/tasks error:", e);
         return NextResponse.json({ error: (e as Error).message }, { status: 500 });

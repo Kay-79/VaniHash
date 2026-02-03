@@ -13,11 +13,27 @@ interface TaskCardProps {
 }
 
 export function TaskCard({ task }: TaskCardProps) {
+    // Helper to handle both Enum and String status
+    const statusStr = String(task.status).toUpperCase();
+
+    // Check grace period using timestamp_ms or created_at
+    const createdT = task.timestamp_ms || task.created_at;
+    const inGracePeriod = createdT ? isInGracePeriod(createdT) : false;
+
+    // Override status if in grace period, but respect final states
+    const isCompleted = statusStr === 'COMPLETED' || task.status === TaskStatus.COMPLETED;
+    const isCancelled = statusStr === 'CANCELLED' || task.status === TaskStatus.CANCELLED;
+    const isPending = !isCompleted && !isCancelled && (statusStr === 'PENDING' || task.status === TaskStatus.PENDING || inGracePeriod);
+    const isActive = !isCompleted && !isCancelled && !inGracePeriod && (statusStr === 'ACTIVE' || task.status === TaskStatus.ACTIVE);
+    const isAvailable = isActive;
+
     const [timeLeft, setTimeLeft] = useState<string>('Calculating...');
 
     const calculateTime = () => {
+        if (isCompleted) return 'Completed';
+        if (isCancelled) return 'Cancelled';
+
         // Use timestamp_ms (chain time) or created_at (DB time)
-        const createdT = task.timestamp_ms || task.created_at;
         if (!createdT) return 'Unlimited';
 
         // Check Grace Period (15 mins)
@@ -31,10 +47,6 @@ export function TaskCard({ task }: TaskCardProps) {
         // Active Period
         if (!task.lock_duration_ms) return 'Unlimited';
 
-        // Expiry calculation:
-        // We assume valid duration starts AFTER creation (or after grace period?)
-        // Usually lock duration is "total duration from creation".
-        // Let's assume expiry = creation + lock_duration
         const createdMs = typeof createdT === 'string' && /^\d+$/.test(createdT)
             ? parseInt(createdT)
             : new Date(createdT).getTime();
@@ -56,20 +68,12 @@ export function TaskCard({ task }: TaskCardProps) {
         setTimeLeft(calculateTime());
         const timer = setInterval(() => setTimeLeft(calculateTime()), 1000); // Update every second for grace period countdown
         return () => clearInterval(timer);
-    }, [task.timestamp_ms, task.created_at, task.lock_duration_ms]);
-
-    // Helper to handle both Enum and String status
-    const statusStr = String(task.status).toUpperCase();
-
-    // Check grace period using timestamp_ms or created_at
-    const createdT = task.timestamp_ms || task.created_at;
-    const inGracePeriod = createdT ? isInGracePeriod(createdT) : false;
+    }, [task.timestamp_ms, task.created_at, task.lock_duration_ms, isCompleted, isCancelled]);
 
     // Override status if in grace period
-    const isPending = statusStr === 'PENDING' || task.status === TaskStatus.PENDING || inGracePeriod;
-    const isActive = (statusStr === 'ACTIVE' || task.status === TaskStatus.ACTIVE) && !inGracePeriod;
-    const isCompleted = statusStr === 'COMPLETED' || task.status === TaskStatus.COMPLETED;
-    const isAvailable = isActive; // Only active tasks can be submitted to? Or maybe pending too? Assuming pending tasks are waiting. Checking isAvailable usage: it controls SubmitProofDialog availability. If pending (grace period), maybe shouldn't submit yet? User said "display pending if not start now". Usually pending means not active. So isAvailable = isActive seems correct.
+    // Override status if in grace period, but respect final states
+    // Removed duplicate logic used for rendering badges.
+    // The logic is now at the top of the component.
 
     const renderPattern = () => {
         let display = '';
@@ -105,10 +109,10 @@ export function TaskCard({ task }: TaskCardProps) {
     };
 
     const getStatusLabel = () => {
+        if (isCompleted) return 'COMPLETED';
+        if (isCancelled || statusStr === 'CANCELLED' || task.status === TaskStatus.CANCELLED) return 'CANCELLED';
         if (isPending) return 'PENDING';
         if (isActive) return 'ACTIVE';
-        if (isCompleted) return 'COMPLETED';
-        if (statusStr === 'CANCELLED' || task.status === TaskStatus.CANCELLED) return 'CANCELLED';
         return statusStr || 'UNKNOWN';
     };
 

@@ -20,6 +20,9 @@ export async function GET(
             typeof value === 'bigint' ? value.toString() : value
         ));
 
+        // Add miner alias
+        serialized.miner = serialized.completer;
+
         return NextResponse.json(serialized);
     } catch (e) {
         return NextResponse.json({ error: (e as Error).message }, { status: 500 });
