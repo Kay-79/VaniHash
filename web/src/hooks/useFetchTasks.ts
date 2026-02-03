@@ -11,6 +11,10 @@ export type UseFetchTasksOptions = {
 export function useFetchTasks(options?: UseFetchTasksOptions) {
     const searchParams = useSearchParams();
     const search = searchParams.get('search');
+    const minReward = searchParams.get('minReward');
+    const maxReward = searchParams.get('maxReward');
+    const length = searchParams.get('length');
+
     // Allow options to override URL params, but prioritize options if provided
     const statusParam = options?.status || searchParams.get('status');
     const creatorParam = options?.creator;
@@ -26,6 +30,9 @@ export function useFetchTasks(options?: UseFetchTasksOptions) {
             if (search) query.set('search', search);
             if (statusParam && statusParam !== 'ALL') query.set('status', statusParam);
             if (creatorParam) query.set('creator', creatorParam);
+            if (minReward) query.set('minReward', minReward);
+            if (maxReward) query.set('maxReward', maxReward);
+            if (length) query.set('length', length);
 
             const res = await fetch(`/api/tasks?${query.toString()}`);
 

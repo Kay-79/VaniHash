@@ -41,6 +41,11 @@ function HomeContent() {
             <div className="p-6 space-y-6">
                 {/* Task Feed */}
                 <div>
+                    {/* Miner Stats - Only shown if connected? Or always? MinerStats handles connection state. */}
+                    <div className="mb-6">
+                        <MinerStats />
+                    </div>
+
                     <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
                         {/* Tabs */}
                         <div className="flex bg-gray-900/50 p-1 rounded-xl border border-gray-800 w-fit">
