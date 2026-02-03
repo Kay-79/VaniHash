@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
             WHERE completer = ${address} AND status = 'COMPLETED'
         ` as any[];
 
-        const totalRewards = rewardsQuery[0]?.totalRewards || 0n;
+        const totalRewards = rewardsQuery[0]?.totalRewards || BigInt(0);
 
         return NextResponse.json({
             address,

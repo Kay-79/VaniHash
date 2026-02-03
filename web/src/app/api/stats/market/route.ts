@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
             AND timestamp_ms >= ${oneDayAgo}
         ` as any[];
 
-        const volume24h = volumeQuery[0]?.volume || 0n;
+        const volume24h = volumeQuery[0]?.volume || BigInt(0);
 
         // 4. Avg Sale: Average price of all sold listings (or last 24h? usually all time or check requirement. Let's do all time or 24h? "Avg Sale" implies general market price. Let's do all time for now or last 100 sales)
         const avgSaleQuery = await prisma.$queryRaw`

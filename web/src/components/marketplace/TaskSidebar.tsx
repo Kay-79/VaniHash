@@ -64,21 +64,16 @@ export function TaskSidebar() {
                             const isSelected = currentStatuses.includes(s);
 
                             const handleToggle = () => {
-                                let newStatuses = [...currentStatuses];
-                                if (isSelected) {
-                                    newStatuses = newStatuses.filter(item => item !== s);
-                                } else {
-                                    newStatuses.push(s);
-                                }
-                                updateUrl('status', newStatuses.length > 0 ? newStatuses.join(',') : null);
+                                // Single select logic: if selected, deselect; otherwise select only this one
+                                updateUrl('status', isSelected ? null : s);
                             };
 
                             return (
                                 <div
                                     key={s}
                                     className={`flex items-center gap-3 p-2 rounded-lg border cursor-pointer transition-colors ${isSelected
-                                            ? 'bg-blue-600/10 border-blue-500/30'
-                                            : 'border-transparent hover:bg-gray-800/30'
+                                        ? 'bg-blue-600/10 border-blue-500/30'
+                                        : 'border-transparent hover:bg-gray-800/30'
                                         }`}
                                     onClick={handleToggle}
                                 >

@@ -16,6 +16,7 @@ export function useCreateTask() {
         rewardSui: string,
         lockDurationMs: number = 0,
         bytecode: Uint8Array = new Uint8Array(), // Bytecode
+        targetType: string = '0x2::coin::Coin<0x2::sui::SUI>', // Target Type
         onSuccess?: (result: any) => void,
         onError?: (error: any) => void
     ) => {
@@ -42,7 +43,7 @@ export function useCreateTask() {
                 tx.pure(bcs.vector(bcs.u8()).serialize(bytecode)), // Bytecode
                 tx.object('0x6'), // Clock
             ],
-            typeArguments: ['0x2::coin::Coin<0x2::sui::SUI>'],
+            typeArguments: [targetType],
         });
 
         signAndExecute(

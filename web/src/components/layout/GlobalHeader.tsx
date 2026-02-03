@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { isAdmin } from '@/constants/admin';
 
+import Image from 'next/image';
+
 export function GlobalHeader() {
     const pathname = usePathname();
     const account = useCurrentAccount();
@@ -31,7 +33,13 @@ export function GlobalHeader() {
             <div className="flex items-center gap-8">
                 {/* Logo */}
                 <Link href="/" className="flex items-center gap-2 group">
-                    <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-yellow-500 to-orange-600 group-hover:animate-pulse" />
+                    <Image
+                        src="/logo.png"
+                        alt="VaniHash Logo"
+                        width={32}
+                        height={32}
+                        className="rounded-lg group-hover:animate-pulse"
+                    />
                     <h1 className="text-xl font-bold text-white flex items-center gap-2">
                         VaniHash
                         <Badge variant="secondary" className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20 text-[10px] px-1.5 py-0">
