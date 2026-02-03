@@ -54,7 +54,8 @@ export function useFetchTasks(options?: UseFetchTasksOptions) {
         } finally {
             setLoading(false);
         }
-    }, [search, statusParam, creatorParam, options?.limit]);
+        // Memoize on primitive values, not the options object itself
+    }, [search, statusParam, creatorParam, options?.limit, minReward, maxReward, length]);
 
     useEffect(() => {
         fetchTasks();

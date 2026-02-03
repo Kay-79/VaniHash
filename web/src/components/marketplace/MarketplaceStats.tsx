@@ -53,8 +53,6 @@ export function MarketplaceStats() {
         };
 
         fetchStats();
-        const interval = setInterval(fetchStats, 10000); // Poll every 10s
-        return () => clearInterval(interval);
     }, []);
 
     const formatSui = (mist: string) => {

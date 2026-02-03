@@ -149,16 +149,35 @@ export function ListingModal({ itemId, itemType }: ListingModalProps) {
                                     placeholder="0x..."
                                     value={targetItemId}
                                     onChange={(e) => setTargetItemId(e.target.value)}
+                                    className="font-mono text-sm"
+                                    onBlur={async () => {
+                                        if (!targetItemId || targetItemId.length < 10) return;
+                                        setIsVerifying(true);
+                                        try {
+                                            const obj = await suiClient.getObject({
+                                                id: targetItemId,
+                                                options: { showType: true, showContent: true }
+                                            });
+                                            if (obj.data?.type) {
+                                                setTargetItemType(obj.data.type);
+                                                toast.success("Object found: " + obj.data.type.split('::').pop());
+                                            }
+                                        } catch (e) {
+                                            toast.error("Invalid Object ID");
+                                        } finally {
+                                            setIsVerifying(false);
+                                        }
+                                    }}
                                 />
                             </div>
-                            <div className="space-y-2">
-                                <Label>Item Type (e.g. 0x...::module::Type)</Label>
-                                <Input
-                                    placeholder="0x...::module::Type"
-                                    value={targetItemType}
-                                    onChange={(e) => setTargetItemType(e.target.value)}
-                                />
-                            </div>
+
+                            {/* Auto-detected Type Display */}
+                            {targetItemType && (
+                                <div className="p-3 bg-gray-900/50 border border-gray-800 rounded-md text-xs">
+                                    <span className="text-gray-500 block mb-1">Detected Type:</span>
+                                    <code className="text-blue-400 break-all">{targetItemType}</code>
+                                </div>
+                            )}
                             <div className="space-y-2">
                                 <Label>Listing Price (SUI)</Label>
                                 <Input

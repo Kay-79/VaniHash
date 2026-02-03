@@ -36,8 +36,6 @@ export function ActivityFeed({ mode = 'market' }: ActivityFeedProps) {
         };
 
         fetchActivity();
-        const interval = setInterval(fetchActivity, 5000); // Poll every 5s
-        return () => clearInterval(interval);
     }, [mode]);
 
     const formatPrice = (mist: string) => {
@@ -59,8 +57,8 @@ export function ActivityFeed({ mode = 'market' }: ActivityFeedProps) {
                     <div key={i} className="p-4 hover:bg-white/5 transition-colors cursor-pointer group">
                         <div className="flex items-center justify-between mb-1">
                             <span className={`text-xs font-bold px-2 py-0.5 rounded ${act.type === 'SALE' || act.type === 'TASK_COMPLETED' ? 'bg-green-500/20 text-green-400' :
-                                    act.type === 'LIST' || act.type === 'TASK_CREATED' ? 'bg-blue-500/20 text-blue-400' :
-                                        'bg-purple-500/20 text-purple-400'
+                                act.type === 'LIST' || act.type === 'TASK_CREATED' ? 'bg-blue-500/20 text-blue-400' :
+                                    'bg-purple-500/20 text-purple-400'
                                 }`}>
                                 {act.type === 'SALE' ? 'SOLD' :
                                     act.type === 'LIST' ? 'LISTED' :
