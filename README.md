@@ -51,7 +51,13 @@ sui move build
 sui client publish --gas-budget 100000000
 ```
 
-### 2. Frontend (Web)
+### 2. Root
+Init
+```bash
+npx prisma generate
+```
+
+### 3. Frontend (Web)
 Run the Next.js application:
 ```bash
 cd web
@@ -61,7 +67,7 @@ npm run dev
 ```
 Access the app at `http://localhost:3000`.
 
-### 3. Indexer
+### 4. Indexer
 Run the event indexer:
 ```bash
 cd indexer
