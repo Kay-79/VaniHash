@@ -1,25 +1,30 @@
 # VaniHash - Decentralized Vanity Task Marketplace
 
 ## Project Description
-**VaniHash** is a decentralized **Task Marketplace** on the Sui blockchain where users can request custom vanity Object IDs, and miners compete to generate them.
+**VaniHash** is a decentralized **Task Marketplace** on the Sui blockchain where users can request custom **Vanity Object & Package IDs**, and miners compete to generate them.
 
-Unlike traditional vanity address generators where you mine for yourself, VaniHash creates a wildly efficient economy around "Vibs":
-- **Creators** post **Tasks** specifying a desired prefix (e.g., `0xcafe...`) and a reward.
-- **Miners** browse these tasks, use their computational power to "mine" the matching Salt/ID (Proof-of-Work), and submit the proof.
-- **Trade**: The mined vanity objects can be traded or transferred securely on the VaniHash marketplace.
+Whether you need a cool address for a new Move Package (e.g., `0x00...cafe`) or a unique Object ID for a special NFT, VaniHash streamlines the process:
+- **Creators** post **Tasks** specifying a desired prefix for their future Object or Package ID and a reward.
+- **Miners** browse tasks, use their computational power to "mine" the correct ID (Proof-of-Work), and submit the result.
+- **Delivery**: The creator receives the Object ID or Package ID at the desired Vanity Address.
 
-This platform turns computational work into a tradable asset, creating a liquid market for simplified, human-readable, or "vibey" Sui Object IDs.
+This platform turns unit-generating work into a secure, tradable service for developers and collectors alike.
 
 ## Hackathon Track
 **Category**: **Sui Track**
 *Building an innovative application with great "Vibe" on Sui.*
 
 ## Features
-- **Task Creation**: Users create on-chain requests for specific vanity prefixes alongside a bounty.
-- **Decentralized Mining**: Miners discover tasks and perform Proof-of-Work off-chain to find the matching salt.
-- **Secure Exchange**: Smart contracts ensure the mined object satisfies the requirement before releasing rewards.
-- **Marketplace**: A secondary market to trade the generated Vanity NFTs/Objects.
-- **Real-Time Indexer**: Tracks new tasks, mining progress, and marketplace listings instantly.
+- **Dual Vanity Support**: Request specific prefixes for both **Move Packages** and **General Objects**.
+- **Decentralized Mining Protocol**: Miners perform Proof-of-Work to find the salt that generates the target ID.
+- **Secure Submission**: Miners submit the solution on-chain to claim rewards.
+- **Verifiable Results**: Smart contracts verify that the submitted salt produces the requested vanity pattern.
+- **Real-Time Indexer**: Tracks tasks, mining solutions, and marketplace activity.
+
+## Mining Tools
+Miners can use our open-source CLI tool to discover tasks and generate proofs:
+- **Sui ID Miner**: [https://github.com/Kay-79/sui-id-miner](https://github.com/Kay-79/sui-id-miner)
+*(This tool is optimized for finding salts for VaniHash tasks)*
 
 ## Architecture
 - **Smart Contracts**: Written in **Move 2024** (beta/stable edition), deployed on Sui Testnet.
@@ -32,12 +37,16 @@ This platform turns computational work into a tradable asset, creating a liquid 
 ### Prerequisites
 - Node.js (v20+)
 - Sui Client CLI
-- PostgreSQL Database
+- Supabase
 
 ### 1. Smart Contracts
 Deploy the Move packages (found in `contracts/`):
 ```bash
-cd contracts
+cd contracts/vanihash/
+sui move build
+sui client publish --gas-budget 100000000
+
+cd ../marketprice
 sui move build
 sui client publish --gas-budget 100000000
 ```
