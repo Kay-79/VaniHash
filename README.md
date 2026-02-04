@@ -54,6 +54,7 @@ sui client publish --gas-budget 100000000
 ### 2. Root
 Init
 ```bash
+npm install
 npx prisma generate
 ```
 
