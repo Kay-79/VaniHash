@@ -9,6 +9,9 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "VaniHash",
   description: "The Premier Vanity Object ID Marketplace",
+  icons: {
+    icon: '/logo.png',
+  }
 };
 
 export default function RootLayout({

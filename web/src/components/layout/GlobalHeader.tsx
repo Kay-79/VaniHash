@@ -20,13 +20,14 @@ export function GlobalHeader() {
 
     const handleSearch = (term: string) => {
         if (term) {
-            router.push(`${pathname}?search=${encodeURIComponent(term)}`);
+            const targetPath = pathname.startsWith('/marketplace') ? pathname : '/marketplace';
+            router.push(`${targetPath}?search=${encodeURIComponent(term)}`);
         } else {
             router.push(pathname);
         }
     };
 
-    const isActive = (path: string) => pathname === path;
+    const isActive = (path: string) => pathname === path || (path === '/marketplace' && pathname === '/');
 
     return (
         <div className="flex items-center justify-between px-6 py-4 bg-black/90 border-b border-gray-800 backdrop-blur-md sticky top-0 z-50">
@@ -51,8 +52,8 @@ export function GlobalHeader() {
                 {/* Nav Links */}
                 <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-400">
                     <Link
-                        href="/"
-                        className={cn("transition-colors hover:text-white", isActive('/') ? "text-yellow-500 font-bold" : "")}
+                        href="/tasks"
+                        className={cn("transition-colors hover:text-white", isActive('/tasks') ? "text-yellow-500 font-bold" : "")}
                     >
                         Tasks
                     </Link>
