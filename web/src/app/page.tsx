@@ -76,19 +76,19 @@ export default function LandingPage() {
                         </h1>
 
                         <p className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-                            The first decentralized marketplace for Vanity IDs on Sui.
-                            Mine custom object addresses, trade generic patterns, and own your presence locally and globally.
+                            The universal vanity mining protocol on Sui.
+                            Mine custom IDs for <strong className="text-white">any</strong> object, token, or NFT. Trade your rare addresses instantly.
                         </p>
 
                         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                            <Link href="/marketplace">
+                            <Link href="/tasks">
                                 <Button size="lg" className="h-12 px-8 text-base bg-cyan-500 hover:bg-cyan-400 text-black font-bold border-none shadow-[0_0_25px_rgba(6,182,212,0.4)] transition-all hover:scale-105 w-full sm:w-auto">
                                     Start Mining
                                     <ArrowRight className="ml-2 h-4 w-4" />
                                 </Button>
                             </Link>
                             <Link href="https://docs.sui.io" target="_blank">
-                                <Button variant="outline" size="lg" className="h-12 px-8 text-base border-gray-700 hover:bg-white/5 text-gray-300 w-full sm:w-auto">
+                                <Button variant="outline" size="lg" className="h-12 px-8 text-base border-gray-700 hover:bg-white/5 hover:text-white w-full sm:w-auto">
                                     Read Docs
                                 </Button>
                             </Link>
@@ -120,13 +120,13 @@ export default function LandingPage() {
                         <div className="grid md:grid-cols-3 gap-8">
                             <FeatureCard
                                 icon={<Cpu className="h-8 w-8 text-cyan-400" />}
-                                title="GPU-Accelerated Mining"
-                                description="Leverage your hardware to mine vanity patterns. Our optimized CUDA kernels ensure maximum hashrate for finding rare addresses."
+                                title="Mine Any Object"
+                                description="Universal support. Mine vanity IDs for Kiosks, NFTs, Coins, and Smart Contracts. If it lives on Sui, VaniHash can mine it."
                             />
                             <FeatureCard
                                 icon={<Globe className="h-8 w-8 text-blue-500" />}
-                                title="Global Marketplace"
-                                description="Trade your mined IDs instantly. Buy gas objects with specific prefixes or sell your lucky numbers to the highest bidder."
+                                title="Trade Everything"
+                                description="Turn your compute into liquidity. Buy and sell any mined object in our marketplace, verified on-chain for correctness."
                             />
                             <FeatureCard
                                 icon={<Shield className="h-8 w-8 text-purple-400" />}

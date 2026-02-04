@@ -17,3 +17,10 @@ export function truncatePattern(pattern: string, maxLength = 20): string {
     if (pattern.length <= maxLength) return pattern;
     return `${pattern.slice(0, maxLength)}...`;
 }
+
+export function formatStruct(type: string): string {
+    if (!type) return '';
+    return type
+        .replace(/0x0+([1-9a-fA-F][0-9a-fA-F]*)/g, '0x$1') // 0x0...02 -> 0x2
+        .replace(/00+([1-9a-fA-F][0-9a-fA-F]*)/g, '0x$1'); // 00...02 -> 0x2
+}

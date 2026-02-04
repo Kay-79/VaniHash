@@ -1,4 +1,4 @@
-import { mistToSui } from "@/utils/formatters";
+import { mistToSui, formatStruct, shortenAddress } from "@/utils/formatters";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Copy, ShoppingCart, Square, CheckSquare } from "lucide-react";
@@ -145,10 +145,10 @@ export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
                                             </div>
                                             <div>
                                                 <div className="font-medium text-gray-200">
-                                                    {listing.type.split('<')[1]?.replace('>', '').split('::').pop() || 'Unknown'}
+                                                    {formatStruct(listing.type.split('<')[1]?.replace('>', '') || listing.type).split('::').pop()}
                                                 </div>
                                                 <div className="text-xs text-gray-500 font-mono flex items-center gap-1 group/id">
-                                                    #{listing.listing_id.slice(0, 6)}
+                                                    #{shortenAddress(listing.listing_id)}
                                                     <Copy
                                                         className="h-3 w-3 opacity-0 group-hover/id:opacity-100 cursor-pointer hover:text-white transition-all"
                                                         onClick={(e) => copyId(e, listing.listing_id)}
@@ -165,7 +165,7 @@ export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
                                     </td>
                                     <td className="px-4 py-3 text-right">
                                         <span className="text-yellow-500 hover:text-yellow-400 cursor-pointer font-mono text-xs">
-                                            {listing.seller.slice(0, 4)}...{listing.seller.slice(-4)}
+                                            {shortenAddress(listing.seller)}
                                         </span>
                                     </td>
                                     <td className="px-4 py-3 text-right">

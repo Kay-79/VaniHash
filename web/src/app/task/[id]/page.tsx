@@ -6,8 +6,8 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Task, TaskStatus } from '@/types';
-import { mistToSui } from '@/utils/formatters';
-import { AlertCircle } from 'lucide-react';
+import { mistToSui, formatStruct, shortenAddress } from '@/utils/formatters';
+import { AlertCircle, Copy, Cpu, Clock, ShieldCheck, User, Calendar, Coins, Hash, Box } from 'lucide-react';
 import { SubmitProofDialog } from '@/components/marketplace/SubmitProofDialog';
 import { TaskStatusBadge } from '@/components/marketplace/TaskStatusBadge';
 import { shouldBeActive, isInGracePeriod, formatTimeRemaining, getGracePeriodRemaining } from '@/utils/gracePeriod';
@@ -50,14 +50,20 @@ export default function TaskDetailPage() {
     if (loading) return (
         <DashboardLayout>
             <div className="flex items-center justify-center h-96">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500"></div>
             </div>
         </DashboardLayout>
     );
 
     if (error || !task) return (
         <DashboardLayout>
-            <div className="p-8 text-center text-red-400">Error: {error || 'Task not found'}</div>
+            <div className="p-12 text-center">
+                <div className="p-4 rounded-full bg-red-500/10 text-red-400 w-fit mx-auto mb-4">
+                    <AlertCircle className="h-8 w-8" />
+                </div>
+                <h2 className="text-xl font-bold text-white mb-2">Task Not Found</h2>
+                <p className="text-gray-400">The task you are looking for does not exist or has been removed.</p>
+            </div>
         </DashboardLayout>
     );
 
@@ -86,144 +92,250 @@ export default function TaskDetailPage() {
 
     return (
         <DashboardLayout activityMode="tasks">
-            <div className="max-w-4xl mx-auto p-6 space-y-6">
-                <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold text-white">Task Details</h1>
-                    <Badge variant="outline" className="text-sm">
-                        ID: {task.task_id.slice(0, 6)}...{task.task_id.slice(-4)}
-                    </Badge>
-                </div>
+            <div className="max-w-5xl mx-auto p-6 space-y-8">
 
-                {/* Grace Period Warning */}
-                {inGracePeriod && task.created_at && (
-                    <Card className="bg-yellow-900/20 border-yellow-500/30">
-                        <CardContent className="p-4 flex items-start gap-3">
-                            <AlertCircle className="h-5 w-5 text-yellow-500 mt-0.5" />
+                {/* Header Section */}
+                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 to-black border border-gray-800 p-8 shadow-2xl">
+                    <div className="absolute top-0 right-0 p-4 opacity-10">
+                        <Cpu className="h-64 w-64 text-cyan-500" />
+                    </div>
+
+                    <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                        <div>
+                            <div className="flex items-center gap-3 mb-2">
+                                <Badge variant="secondary" className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 px-3 py-1">
+                                    Mining Task
+                                </Badge>
+                                <span className="text-gray-500 text-sm font-mono flex items-center gap-1">
+                                    ID: {shortenAddress(task.task_id)}
+                                    <Copy
+                                        className="h-3 w-3 cursor-pointer hover:text-white transition-colors"
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(task.task_id);
+                                            toast.success("Task ID copied");
+                                        }}
+                                    />
+                                </span>
+                            </div>
+                            <h1 className="text-4xl font-bold text-white tracking-tight mb-4">
+                                Vanity <span className="bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500">Hash</span>
+                            </h1>
+                            <div className="flex items-center gap-4">
+                                {task.created_at && (
+                                    <TaskStatusBadge
+                                        status={String(task.status)}
+                                        createdAt={task.created_at}
+                                        onGracePeriodExpire={handleGracePeriodExpire}
+                                    />
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="bg-gray-900/50 backdrop-blur-md rounded-xl p-4 border border-gray-800 flex items-center gap-4 min-w-[200px]">
+                            <div className="p-3 rounded-full bg-yellow-500/10 text-yellow-500">
+                                <Coins className="h-6 w-6" />
+                            </div>
                             <div>
-                                <h3 className="text-sm font-semibold text-yellow-400">Grace Period Active</h3>
-                                <p className="text-xs text-gray-300 mt-1">
-                                    This task is in a {formatTimeRemaining(getGracePeriodRemaining(task.created_at))} grace period.
-                                    The creator can still cancel it. It will become active automatically after the grace period expires.
+                                <p className="text-sm text-gray-400 font-medium uppercase tracking-wider">Reward</p>
+                                <p className="text-3xl font-bold text-white tabular-nums">
+                                    {mistToSui(task.reward_amount)} <span className="text-base font-normal text-gray-500">SUI</span>
                                 </p>
                             </div>
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Grace Period Alert */}
+                {inGracePeriod && task.created_at && (
+                    <div className="rounded-xl border border-yellow-500/30 bg-yellow-900/10 p-4 flex items-start gap-4 animate-in slide-in-from-top-2">
+                        <div className="p-2 rounded-full bg-yellow-500/20 text-yellow-500">
+                            <Clock className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <h3 className="text-yellow-400 font-semibold mb-1">Grace Period Active</h3>
+                            <p className="text-sm text-gray-400">
+                                This task is in a {formatTimeRemaining(getGracePeriodRemaining(task.created_at))} grace period.
+                                It requires 3 confirmations (approx 3s) before becoming publicly mineable.
+                                The creator can cancel it safely during this time.
+                            </p>
+                        </div>
+                    </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    {/* Main Info */}
-                    <Card className="md:col-span-2 bg-gray-900/50 border-gray-800">
-                        <CardHeader>
-                            <CardTitle className="text-gray-400 text-sm uppercase tracking-wider">Target Pattern</CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-6">
-                            <div className="p-8 bg-black/40 rounded-lg border border-gray-800 text-center">
-                                <div className="flex flex-col gap-2 items-center justify-center">
-                                    {task.prefix && (
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs text-gray-500 uppercase">Prefix</span>
-                                            <span className="text-2xl font-mono font-bold text-white break-all">0x{task.prefix}...</span>
-                                        </div>
-                                    )}
-                                    {task.contains && (
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs text-gray-500 uppercase">Contains</span>
-                                            <span className="text-2xl font-mono font-bold text-white break-all">...{task.contains}...</span>
-                                        </div>
-                                    )}
-                                    {task.suffix && (
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-xs text-gray-500 uppercase">Suffix</span>
-                                            <span className="text-2xl font-mono font-bold text-white break-all">...{task.suffix}</span>
-                                        </div>
-                                    )}
-                                    {/* Legacy Fallback */}
-                                    {!task.prefix && !task.contains && !task.suffix && task.pattern && (
-                                        <span className="text-4xl font-mono font-bold text-white break-all">
-                                            {task.pattern}
-                                        </span>
-                                    )}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Main Content: Target Pattern */}
+                    <div className="lg:col-span-2 space-y-6">
+                        <Card className="bg-black/30 border-gray-800 backdrop-blur-sm overflow-hidden h-full">
+                            <CardHeader className="border-b border-gray-800/50 bg-gray-900/20">
+                                <div className="flex items-center gap-2">
+                                    <Hash className="h-5 w-5 text-purple-400" />
+                                    <CardTitle>Target Pattern</CardTitle>
                                 </div>
-                            </div>
+                            </CardHeader>
+                            <CardContent className="p-8">
+                                <div className="p-8 bg-gray-950 rounded-2xl border border-gray-800 shadow-inner relative group">
+                                    <div className="absolute top-4 right-4 text-xs font-mono text-gray-700">HEX PATTERN</div>
+                                    <div className="flex flex-col gap-4 items-center justify-center min-h-[120px]">
+                                        {task.prefix && (
+                                            <div className="text-center">
+                                                <span className="text-xs text-gray-500 uppercase tracking-widest mb-1 block">Starts With</span>
+                                                <span className="text-3xl md:text-5xl font-mono font-bold text-white tracking-widest break-all drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
+                                                    0x<span className="text-cyan-400">{task.prefix}</span>...
+                                                </span>
+                                            </div>
+                                        )}
+                                        {task.contains && (
+                                            <div className="text-center">
+                                                <span className="text-xs text-gray-500 uppercase tracking-widest mb-1 block">Contains</span>
+                                                <span className="text-3xl md:text-5xl font-mono font-bold text-white tracking-widest break-all">
+                                                    ...<span className="text-purple-400">{task.contains}</span>...
+                                                </span>
+                                            </div>
+                                        )}
+                                        {task.suffix && (
+                                            <div className="text-center">
+                                                <span className="text-xs text-gray-500 uppercase tracking-widest mb-1 block">Ends With</span>
+                                                <span className="text-3xl md:text-5xl font-mono font-bold text-white tracking-widest break-all drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
+                                                    ...<span className="text-cyan-400">{task.suffix}</span>
+                                                </span>
+                                            </div>
+                                        )}
 
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="p-4 rounded-lg bg-gray-800/20 border border-gray-800">
-                                    <h3 className="text-sm text-gray-400 mb-1">Reward</h3>
-                                    <p className="text-2xl font-bold text-yellow-500">
-                                        {mistToSui(task.reward_amount)} SUI
-                                    </p>
+                                        {!task.prefix && !task.contains && !task.suffix && task.pattern && (
+                                            <span className="text-4xl font-mono font-bold text-white break-all">
+                                                {task.pattern}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
-                                <div className="p-4 rounded-lg bg-gray-800/20 border border-gray-800">
-                                    <h3 className="text-sm text-gray-400 mb-1">Status</h3>
-                                    {task.created_at && (
-                                        <TaskStatusBadge
-                                            status={String(task.status)}
-                                            createdAt={task.created_at}
-                                            onGracePeriodExpire={handleGracePeriodExpire}
-                                        />
-                                    )}
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
 
-                    {/* Meta Info */}
+                                <div className="mt-6 flex flex-col md:flex-row gap-4">
+                                    <div className="flex-1 p-4 rounded-xl bg-gray-900/40 border border-gray-800 flex items-center gap-3">
+                                        <div className="p-2 rounded bg-purple-500/10 text-purple-400">
+                                            <Box className="h-5 w-5" />
+                                        </div>
+                                        <div className="overflow-hidden">
+                                            <p className="text-xs text-gray-500 uppercase">Object Type</p>
+                                            <div className="flex items-center gap-2">
+                                                <p className="text-sm font-mono text-gray-300 truncate">
+                                                    {task.target_type ? formatStruct(task.target_type) : (task.task_type === 1 ? 'Package' : 'Object')}
+                                                </p>
+                                                {task.target_type && (
+                                                    <Copy
+                                                        className="h-3 w-3 text-gray-600 hover:text-white cursor-pointer flex-shrink-0"
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(task.target_type || "");
+                                                            toast.success("Type copied");
+                                                        }}
+                                                    />
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+
+                    {/* Sidebar: Actions & Meta */}
                     <div className="space-y-6">
-                        <Card className="bg-gray-900/50 border-gray-800">
+                        {/* Action Card */}
+                        <Card className="bg-gray-900/60 border-gray-800 backdrop-blur-md">
                             <CardHeader>
-                                <CardTitle className="text-white">Action</CardTitle>
+                                <CardTitle className="flex items-center gap-2">
+                                    <ShieldCheck className="h-5 w-5 text-green-400" />
+                                    Actions
+                                </CardTitle>
                             </CardHeader>
                             <CardContent>
                                 {isCreator ? (
-                                    <div className="p-4 bg-yellow-900/20 rounded text-center border border-yellow-500/20">
-                                        <h4 className="text-yellow-500 font-medium mb-1">You created this task</h4>
-                                        <p className="text-xs text-gray-400 mb-3">
-                                            {inGracePeriod
-                                                ? "You can cancel this task during the grace period."
-                                                : "Waiting for miners to submit proof."}
-                                        </p>
-                                        {inGracePeriod && (
-                                            <Button
-                                                variant="destructive"
-                                                size="sm"
-                                                onClick={handleCancel}
-                                                disabled={isCancelling}
-                                            >
-                                                {isCancelling ? "Cancelling..." : "Cancel Task"}
-                                            </Button>
-                                        )}
+                                    <div className="space-y-4">
+                                        <div className="p-4 bg-yellow-900/10 border border-yellow-500/20 rounded-lg text-center">
+                                            <h4 className="text-yellow-500 font-medium mb-1">Creator Controls</h4>
+                                            <p className="text-xs text-gray-500 mb-4">
+                                                {inGracePeriod
+                                                    ? "Grace period active. You can safely remove this task."
+                                                    : "Task is active. Waiting for miners."}
+                                            </p>
+
+                                            {inGracePeriod ? (
+                                                <Button
+                                                    variant="destructive"
+                                                    className="w-full bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/50"
+                                                    onClick={handleCancel}
+                                                    disabled={isCancelling}
+                                                >
+                                                    {isCancelling ? "Cancelling..." : "Cancel Task"}
+                                                </Button>
+                                            ) : (
+                                                <Button
+                                                    variant="secondary"
+                                                    className="w-full bg-gray-800 text-gray-500 cursor-not-allowed"
+                                                    disabled
+                                                >
+                                                    Cannot Cancel (Active)
+                                                </Button>
+                                            )}
+                                        </div>
                                     </div>
                                 ) : isActive ? (
-                                    <SubmitProofDialog taskId={task.task_id} onSuccess={fetchTask} />
+                                    <div className="space-y-4">
+                                        <div className="p-4 bg-green-900/10 border border-green-500/20 rounded-lg text-center">
+                                            <p className="text-sm text-green-400 mb-3 font-medium">Mine this Vanity Hash</p>
+                                            <SubmitProofDialog taskId={task.task_id} onSuccess={fetchTask} />
+                                        </div>
+                                    </div>
                                 ) : (
-                                    <div className="p-4 bg-gray-800/50 rounded text-center text-gray-400">
+                                    <div className="p-6 bg-gray-800/30 rounded-lg text-center text-gray-500 border border-gray-800/50">
                                         {inGracePeriod ? 'Waiting for grace period...' : 'Task is not active'}
                                     </div>
                                 )}
                             </CardContent>
                         </Card>
 
-                        <Card className="bg-gray-900/50 border-gray-800">
+                        {/* Details Card */}
+                        <Card className="bg-gray-900/40 border-gray-800">
                             <CardContent className="pt-6 space-y-4">
-                                <div>
-                                    <span className="text-xs text-gray-500 uppercase">Creator</span>
-                                    <p className="text-sm text-blue-400 truncate font-mono">{task.creator}</p>
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded bg-blue-500/10 text-blue-400">
+                                        <User className="h-4 w-4" />
+                                    </div>
+                                    <div className="overflow-hidden">
+                                        <p className="text-xs text-gray-500 uppercase">Creator</p>
+                                        <p className="text-sm font-mono text-gray-300 truncate" title={task.creator || ''}>
+                                            {shortenAddress(task.creator)}
+                                        </p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <span className="text-xs text-gray-500 uppercase">Type</span>
-                                    <p className="text-sm text-gray-300 font-mono">{task.task_type === 1 ? 'Package' : 'Object'}</p>
-                                </div>
+
                                 {task.completer && (
-                                    <div>
-                                        <span className="text-xs text-gray-500 uppercase">Completer</span>
-                                        <p className="text-sm text-green-400 truncate font-mono">{task.completer}</p>
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 rounded bg-green-500/10 text-green-400">
+                                            <ShieldCheck className="h-4 w-4" />
+                                        </div>
+                                        <div className="overflow-hidden">
+                                            <p className="text-xs text-gray-500 uppercase">Completer</p>
+                                            <p className="text-sm font-mono text-gray-300 truncate" title={task.completer}>
+                                                {shortenAddress(task.completer)}
+                                            </p>
+                                        </div>
                                     </div>
                                 )}
-                                <div>
-                                    <span className="text-xs text-gray-500 uppercase">Created</span>
-                                    <p className="text-sm text-gray-300">
-                                        {task.created_at && new Date(task.created_at).toLocaleDateString()}
-                                    </p>
+
+                                <div className="flex items-center gap-3">
+                                    <div className="p-2 rounded bg-gray-700/30 text-gray-400">
+                                        <Calendar className="h-4 w-4" />
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-500 uppercase">Created</p>
+                                        <p className="text-sm text-gray-300">
+                                            {task.created_at && new Date(task.created_at).toLocaleDateString(undefined, {
+                                                year: 'numeric',
+                                                month: 'long',
+                                                day: 'numeric'
+                                            })}
+                                        </p>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>

@@ -1,7 +1,7 @@
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { mistToSui } from "@/utils/formatters";
+import { mistToSui, formatStruct, shortenAddress } from "@/utils/formatters";
 import { useMarketplace } from "@/hooks/useMarketplace";
 import { Copy } from "lucide-react";
 import { toast } from "sonner";
@@ -78,11 +78,11 @@ export function ListingCard({ listing, onBuySuccess }: ListingCardProps) {
             <CardContent>
                 <div className="text-2xl font-bold">{mistToSui(listing.price)} SUI</div>
                 <p className="text-xs text-muted-foreground truncate">
-                    Seller: {listing.seller.slice(0, 6)}...{listing.seller.slice(-4)}
+                    Seller: {shortenAddress(listing.seller)}
                 </p>
                 <div className="mt-2">
                     <Badge variant="secondary" className="truncate max-w-full">
-                        {listing.type.split('<')[1]?.replace('>', '') || 'Unknown Item'}
+                        {formatStruct(listing.type.split('<')[1]?.replace('>', '') || listing.type)}
                     </Badge>
                 </div>
             </CardContent>

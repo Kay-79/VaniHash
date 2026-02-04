@@ -47,10 +47,10 @@ export class EventParser {
                 });
 
             } else if (eventType.includes('::kiosk::ItemListed')) {
-                // Handle Standard Kiosk Listing
+                // Handle Standard Kiosk Listing (Filtered by Transaction Source)
                 await this.db.createListing({
-                    listing_id: parsedJson.id, // Kiosk uses 'id'
-                    seller: parsedJson.kiosk,  // Kiosk ID acts as seller reference
+                    listing_id: parsedJson.id,
+                    seller: parsedJson.kiosk,
                     price: parsedJson.price,
                     type: eventType,
                     status: 'ACTIVE',
@@ -59,17 +59,17 @@ export class EventParser {
                 });
 
             } else if (eventType.includes('::kiosk::ItemPurchased')) {
-                // Handle Standard Kiosk Purchase
+                // Handle Standard Kiosk Purchase (Filtered by Transaction Source)
                 await this.db.updateListing(parsedJson.id, {
                     status: 'SOLD',
-                    buyer: event.sender, // Buyer is the transaction sender
+                    buyer: event.sender,
                     price_sold: parsedJson.price,
                     tx_digest: txDigest,
                     timestamp_ms: timestampMs
                 });
 
             } else if (eventType.includes('::kiosk::ItemDelisted')) {
-                // Handle Standard Kiosk Delisting
+                // Handle Standard Kiosk Delisting (Filtered by Transaction Source)
                 await this.db.updateListing(parsedJson.id, {
                     status: 'DELISTED',
                     tx_digest: txDigest,

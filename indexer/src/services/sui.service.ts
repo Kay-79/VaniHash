@@ -19,4 +19,21 @@ export class SuiService {
             order: 'ascending'
         });
     }
+
+    async queryTransactionBlocks(packageId: string, moduleName: string, cursor?: string) {
+        return this.client.queryTransactionBlocks({
+            filter: {
+                MoveFunction: { package: packageId, module: moduleName }
+            },
+            cursor,
+            limit: 50,
+            order: 'ascending',
+            options: {
+                showEvents: true,
+                showEffects: true,
+                showInput: true,
+                showObjectChanges: true
+            }
+        });
+    }
 }

@@ -55,27 +55,37 @@ async function main() {
             // IMPORTANT: If we query different packages, we CANNOT use the same cursor object, as the cursor is tied to the result set of the specific query.
             // We need a separate cursor for Marketplace.
 
+            // 2. Poll Marketplace Transactions (Filtered by Module Interaction)
             if (CONFIG.MARKETPLACE_PACKAGE_ID) {
-                let marketCursor = await dbService.getCursor('market_cursor')
-                    .then(c => c ? { txDigest: c.tx_digest!, eventSeq: c.event_seq! } : undefined);
+                let marketTxCursor = await dbService.getCursor('market_tx_cursor')
+                    .then(c => c ? c.tx_digest : undefined); // Txs cursor is often just a digest/string in SDK depending on version, check Type. 
+                // Actually queryTransactionBlocks cursor is string (txDigest).
 
-                const marketEvents = await suiService.queryEvents(
+                // Use the new queryTransactionBlocks method
+                const marketTxs = await suiService.queryTransactionBlocks(
                     CONFIG.MARKETPLACE_PACKAGE_ID,
                     CONFIG.MODULE_MARKET,
-                    marketCursor
+                    marketTxCursor || undefined
                 );
 
-                for (const event of marketEvents.data) {
-                    await eventParser.parse(event);
+                for (const tx of marketTxs.data) {
+                    if (tx.events) {
+                        for (const event of tx.events) {
+                            // We pass the event to the parser. 
+                            // The parser logic for Kiosk events checks the event type string.
+                            // Since we are iterating TXs that interacted with OUR market module,
+                            // any Kiosk event here is relevant.
+                            await eventParser.parse(event);
+                        }
+                    }
                 }
 
-                if (marketEvents.hasNextPage && marketEvents.nextCursor) {
-                    marketCursor = marketEvents.nextCursor;
-                    await dbService.saveCursor('market_cursor', marketCursor!.txDigest, marketCursor!.eventSeq);
-                } else if (marketEvents.data.length > 0) {
-                    const lastEvent = marketEvents.data[marketEvents.data.length - 1];
-                    marketCursor = { txDigest: lastEvent.id.txDigest, eventSeq: lastEvent.id.eventSeq };
-                    await dbService.saveCursor('market_cursor', marketCursor!.txDigest, marketCursor!.eventSeq);
+                if (marketTxs.hasNextPage && marketTxs.nextCursor) {
+                    marketTxCursor = marketTxs.nextCursor;
+                    // We save the cursor. For Txs, we might store it as tx_digest.
+                    // dbService.saveCursor expects (id, txDigest, eventSeq). 
+                    // Transaction cursor is usually just a string (digest). We can pass 0 or null for eventSeq.
+                    await dbService.saveCursor('market_tx_cursor', marketTxCursor!, 0);
                 }
             }
 
