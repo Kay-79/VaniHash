@@ -63,7 +63,7 @@ Run the Next.js application:
 ```bash
 cd web
 npm install
-# Set up .env.local with your SUI_NETWORK and other vars
+# Set up .env
 npm run dev
 ```
 Access the app at `http://localhost:3000`.
@@ -73,7 +73,7 @@ Run the event indexer:
 ```bash
 cd indexer
 npm install
-# Ensure DATABASE_URL is set in .env
+# Set up .env
 npm run start
 ```
 

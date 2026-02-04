@@ -3,11 +3,26 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { ArrowRight, Cpu, Globe, Zap, Shield, Coins, BarChart3 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { GlobalHeader } from '@/components/layout/GlobalHeader';
 
 export default function LandingPage() {
     const [stats, setStats] = useState({ volume: '0', miners: '0', tasks: '0' });
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleMouseMove = (e: MouseEvent) => {
+            if (!containerRef.current) return;
+            const { clientX, clientY } = e;
+            const x = clientX;
+            const y = clientY;
+            containerRef.current.style.setProperty('--mouse-x', `${x}px`);
+            containerRef.current.style.setProperty('--mouse-y', `${y}px`);
+        };
+
+        window.addEventListener('mousemove', handleMouseMove);
+        return () => window.removeEventListener('mousemove', handleMouseMove);
+    }, []);
 
     useEffect(() => {
         fetch('/api/stats/market')
@@ -15,142 +30,187 @@ export default function LandingPage() {
             .then(data => {
                 setStats({
                     volume: (Number(data.volume24h || 0) / 1e9).toFixed(0),
-                    miners: (data.listedCount || 0).toString(), // Using listed as proxy or replace with real miner count if avail
+                    miners: (data.listedCount || 0).toString(),
                     tasks: '1240' // Mock or fetch real
                 });
             })
             .catch(console.error);
     }, []);
 
-    return (
-        <div className="min-h-screen bg-[#020617] text-white selection:bg-cyan-500/30 font-sans">
-            {/* Navbar (Simplified for Landing) */}
-            <header className="fixed top-0 w-full z-50 border-b border-white/5 bg-[#020617]/80 backdrop-blur-md">
-                <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <img
-                            src="/logo.png"
-                            alt="VaniHash Logo"
-                            className="h-8 w-8 rounded-lg shadow-[0_0_15px_rgba(6,182,212,0.5)]"
-                        />
-                        <span className="text-xl font-bold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
-                            VaniHash
-                        </span>
-                    </div>
+    const scrollToSection = (id: string) => {
+        const element = document.getElementById(id);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth' });
+        }
+    };
 
-                    <div className="flex items-center gap-6">
-                        <Link href="/marketplace" className="text-sm font-medium text-gray-400 hover:text-cyan-400 transition-colors">
-                            Marketplace
-                        </Link>
-                        <Link href="https://github.com/Kay-79/VaniHash" target="_blank" className="text-sm font-medium text-gray-400 hover:text-cyan-400 transition-colors">
-                            GitHub
-                        </Link>
-                        <Link href="/marketplace">
-                            <Button className="bg-cyan-500 hover:bg-cyan-400 text-black font-bold border-none shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all hover:scale-105">
+    return (
+        <div 
+            ref={containerRef}
+            className="h-screen bg-[#020617] text-white selection:bg-cyan-500/30 font-sans overflow-y-auto snap-y snap-mandatory scroll-smooth perspective-1000 relative"
+        >
+            {/* Mouse Spotlight Effect */}
+            <div 
+                className="pointer-events-none fixed inset-0 z-0 transition-opacity duration-300 opacity-100"
+                style={{
+                    background: 'radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgba(6,182,212,0.10), transparent 40%)',
+                }}
+            />
+
+            {/* Navbar - Floating Glass Pill */}
+            <header className="fixed top-6 left-0 right-0 z-50 flex justify-center pointer-events-none">
+                <div className="bg-[#020617]/70 backdrop-blur-xl border border-white/10 rounded-full px-6 py-3 shadow-[0_0_30px_rgba(37,99,235,0.2)] pointer-events-auto flex items-center gap-8 animate-fade-in-down">
+                    <div className="flex items-center gap-2 mr-4">
+                        <img src="/logo.png" alt="VaniHash" className="h-8 w-8 rounded-lg shadow-lg" />
+                        <span className="text-lg font-bold tracking-tight text-white">VaniHash</span>
+                    </div>
+                    <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-400">
+                        <button onClick={() => scrollToSection('features')} className="hover:text-cyan-400 transition-colors cursor-pointer">Features</button>
+                        <Link href="/marketplace" className="hover:text-cyan-400 transition-colors">Marketplace</Link>
+                        <Link href="https://github.com/Kay-79/VaniHash" target="_blank" className="hover:text-cyan-400 transition-colors">GitHub</Link>
+                    </nav>
+                    <div className="pl-4 border-l border-white/10">
+                         <Link href="/tasks">
+                            <Button size="sm" className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold border-none shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all hover:scale-105 rounded-full px-6">
                                 Launch App
                             </Button>
                         </Link>
                     </div>
                 </div>
             </header>
+            
+            {/* Main Content */}
+            <main className="relative">
+                 {/* Background Hashes (Random Mining Effect) - Scrolls with content */}
+                <div className="absolute inset-0 pointer-events-none z-[1] overflow-hidden">
+                    <BackgroundHashes />
+                </div>
 
-            {/* Hero Section */}
-            <main>
-                <section className="relative pt-32 pb-20 overflow-hidden">
-                    {/* Background Effects */}
-                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-cyan-500/10 rounded-full blur-[120px] pointer-events-none" />
-                    <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-blue-600/10 rounded-full blur-[100px] pointer-events-none" />
+                {/* Section 1: Hero (Full Height, Snaps) */}
+                <section className="h-screen w-full relative flex flex-col justify-center items-center overflow-hidden snap-start">
+                    {/* ... (backgrounds omitted for brevity, they match existing) ... */}
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900/20 via-[#020617] to-[#020617] z-0" />
+                    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 z-0 mix-blend-overlay" />
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-cyan-500/10 rounded-full blur-[120px] animate-pulse pointer-events-none" />
 
-                    <div className="container mx-auto px-6 text-center relative z-10">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-medium text-cyan-400 mb-8 animate-fade-in-up">
+                    <div className="container mx-auto px-6 relative z-10 text-center flex flex-col items-center">
+                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-xs font-bold text-cyan-400 mb-8 animate-fade-in-up backdrop-blur-md">
                             <span className="relative flex h-2 w-2">
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
                             </span>
-                            Live on Sui Testnet
+                            LIVE ON SUI TESTNET
                         </div>
 
-                        <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-6 bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-gray-500 leading-tight">
-                            Forge Your <br />
-                            <span className="text-cyan-400 drop-shadow-[0_0_15px_rgba(6,182,212,0.5)]">On-Chain Identity</span>
+                        <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-8 bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-gray-500 animate-float leading-[1.1]">
+                            <ScrambleText text="Forge Your" className="block text-white" />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 drop-shadow-[0_0_30px_rgba(6,182,212,0.5)]">
+                                <ScrambleText text="On-Chain Identity" />
+                            </span>
                         </h1>
 
-                        <p className="text-lg md:text-xl text-gray-400 max-w-2xl mx-auto mb-10 leading-relaxed">
-                            The universal vanity mining protocol on Sui.
-                            Mine custom IDs for <strong className="text-white">any</strong> object, token, or NFT. Trade your rare addresses instantly.
+                        <p className="text-lg md:text-2xl text-gray-400 max-w-3xl mx-auto mb-12 leading-relaxed font-light">
+                            The universal vanity mining protocol.
+                            Mine custom IDs for <strong className="text-white font-semibold">any</strong> object, token, NFT, or package. 
+                            Trade your rare IDs instantly.
                         </p>
 
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                            <Link href="/tasks">
-                                <Button size="lg" className="h-12 px-8 text-base bg-cyan-500 hover:bg-cyan-400 text-black font-bold border-none shadow-[0_0_25px_rgba(6,182,212,0.4)] transition-all hover:scale-105 w-full sm:w-auto">
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-6 w-full max-w-md mx-auto">
+                            <Link href="/tasks" className="w-full sm:w-auto">
+                                <Button size="lg" className="w-full h-14 px-10 text-lg bg-white text-black hover:bg-gray-100 font-bold border-none shadow-[0_0_40px_rgba(255,255,255,0.3)] transition-all hover:scale-105 rounded-full">
                                     Start Mining
-                                    <ArrowRight className="ml-2 h-4 w-4" />
+                                    <ArrowRight className="ml-2 h-5 w-5" />
                                 </Button>
                             </Link>
-                            <Link href="https://docs.sui.io" target="_blank">
-                                <Button variant="outline" size="lg" className="h-12 px-8 text-base border-gray-700 hover:bg-white/5 hover:text-white w-full sm:w-auto">
+                            <Link href="https://docs.sui.io" target="_blank" className="w-full sm:w-auto">
+                                <Button variant="outline" size="lg" className="w-full h-14 px-10 text-lg border-white/20 bg-white/5 hover:bg-white/10 hover:text-white text-white hover:border-white/40 backdrop-blur-md transition-all rounded-full">
                                     Read Docs
                                 </Button>
                             </Link>
                         </div>
+                    </div>
 
-                        {/* Stats Bar */}
-                        <div className="mt-20 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
+                    {/* Scroll Indicator */}
+                    <div onClick={() => scrollToSection('features')} className="absolute bottom-12 left-1/2 -translate-x-1/2 animate-bounce cursor-pointer z-20 group p-4">
+                        <div className="flex flex-col items-center gap-3 text-gray-500 group-hover:text-cyan-400 transition-colors duration-300">
+                            <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Explore</span>
+                            <div className="w-6 h-10 rounded-full border-2 border-current flex justify-center p-1">
+                                <div className="w-1 h-2 bg-current rounded-full animate-scroll-down" />
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Section 2: Stats & Features (Full Height, Snaps) */}
+                <section id="features" className="min-h-screen w-full relative flex flex-col justify-center py-20 bg-black/40 border-t border-white/5 snap-start">
+                    {/* Background Grid */}
+                    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay" />
+                    
+                    <div className="container mx-auto px-6 relative z-10 h-full flex flex-col justify-center">
+                        
+                        {/* Title */}
+                        <div className="text-center mb-16">
+                            <h2 className="text-4xl md:text-5xl font-black text-white mb-6">
+                                Power Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">Web3 Identity</span>
+                            </h2>
+                            <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+                                The most advanced vanity Ids mining protocol, built for speed and universality.
+                            </p>
+                        </div>
+                        
+                        {/* Stats - Glass Cards */}
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-5xl mx-auto mb-20 w-full">
                             {[
-                                { label: 'Total Volume', value: `${stats.volume} SUI`, icon: Coins },
-                                { label: 'Active Miners', value: '120+', icon: Cpu },
-                                { label: 'Hashes / Sec', value: '4.2 MH/s', icon: Zap },
-                                { label: 'Tasks Solved', value: '1,240+', icon: Shield },
+                                { label: 'Total Volume', value: `${stats.volume} SUI`, icon: Coins, color: 'text-yellow-400' },
+                                { label: 'Active Miners', value: '120+', icon: Cpu, color: 'text-cyan-400' },
+                                { label: 'Hashes / Sec', value: '4.2 MH/s', icon: Zap, color: 'text-orange-400' },
+                                { label: 'Tasks Solved', value: '1,240+', icon: Shield, color: 'text-purple-400' },
                             ].map((stat, i) => (
-                                <div key={i} className="p-4 rounded-xl bg-white/5 border border-white/5 backdrop-blur-sm flex flex-col items-center justify-center group hover:bg-white/10 transition-colors cursor-default">
-                                    <div className="mb-2 p-2 rounded-full bg-cyan-500/10 text-cyan-400 group-hover:first:text-cyan-300">
-                                        <stat.icon className="h-5 w-5" />
+                                <div key={i} className="group relative p-6 rounded-3xl bg-white/[0.03] border border-white/10 hover:bg-white/[0.06] hover:border-cyan-500/30 transition-all duration-300 hover:-translate-y-1">
+                                    <div className={`mb-3 p-3 rounded-2xl bg-white/5 w-fit ${stat.color} group-hover:scale-110 transition-transform`}>
+                                        <stat.icon className="h-6 w-6" />
                                     </div>
-                                    <div className="text-2xl font-bold font-mono text-white">{stat.value}</div>
-                                    <div className="text-xs text-gray-500 uppercase tracking-wider font-semibold">{stat.label}</div>
+                                    <div className="text-3xl font-black font-sans text-white mb-1 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-gray-400 transition-all">{stat.value}</div>
+                                    <div className="text-xs text-gray-500 font-bold uppercase tracking-wider">{stat.label}</div>
                                 </div>
                             ))}
                         </div>
+
+                        {/* Features Grid */}
+                        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <FeatureCard
+                                icon={<Cpu className="h-6 w-6 text-cyan-400" />}
+                                title="Universal Mining"
+                                description="Support for Objects, Packages, NFTs, Kiosks, everything ID on Sui."
+                            />
+                            <FeatureCard
+                                icon={<Globe className="h-6 w-6 text-blue-500" />}
+                                title="Liquid Marketplace"
+                                description="Buy and sell rare IDs instantly."
+                            />
+                            <FeatureCard
+                                icon={<Shield className="h-6 w-6 text-purple-400" />}
+                                title="On-Chain Verify"
+                                description="Trustless Proof of Work verification by smart contracts."
+                            />
+                            <FeatureCard
+                                icon={<Zap className="h-6 w-6 text-yellow-400" />}
+                                title="CPU/GPU Mining"
+                                description="Support for CPU/GPU mining."
+                            />
+                        </div>
+
+                        {/* Integrated Footer */}
+                        <div className="mt-20 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center text-gray-600 text-sm">
+                            <p>&copy; 2026 VaniHash Protocol.</p>
+                            <div className="flex gap-6 mt-4 md:mt-0">
+                                <Link href="#" className="hover:text-cyan-400 transition-colors">Privacy</Link>
+                                <Link href="#" className="hover:text-cyan-400 transition-colors">Terms</Link>
+                                <Link href="#" className="hover:text-cyan-400 transition-colors">Twitter</Link>
+                            </div>
+                        </div>
                     </div>
                 </section>
-
-                {/* Feature Grid */}
-                <section className="py-24 bg-black/40 border-t border-white/5">
-                    <div className="container mx-auto px-6">
-                        <div className="grid md:grid-cols-3 gap-8">
-                            <FeatureCard
-                                icon={<Cpu className="h-8 w-8 text-cyan-400" />}
-                                title="Mine Any Object"
-                                description="Universal support. Mine vanity IDs for Kiosks, NFTs, Coins, and Smart Contracts. If it lives on Sui, VaniHash can mine it."
-                            />
-                            <FeatureCard
-                                icon={<Globe className="h-8 w-8 text-blue-500" />}
-                                title="Trade Everything"
-                                description="Turn your compute into liquidity. Buy and sell any mined object in our marketplace, verified on-chain for correctness."
-                            />
-                            <FeatureCard
-                                icon={<Shield className="h-8 w-8 text-purple-400" />}
-                                title="Trustless Verification"
-                                description="Fully decentralized. Smart contracts verify every Proof of Work on-chain before unlocking rewards. No centralized servers."
-                            />
-                        </div>
-                    </div>
-                </section>
-
-                {/* Footer */}
-                <footer className="py-12 border-t border-white/5 bg-[#020617]">
-                    <div className="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center text-gray-500 text-sm">
-                        <div className="flex items-center gap-2 mb-4 md:mb-0">
-                            <img src="/logo.png" alt="Logo" className="h-6 w-6 rounded opacity-80" />
-                            <span>&copy; 2026 VaniHash. All rights reserved.</span>
-                        </div>
-                        <div className="flex gap-6">
-                            <Link href="#" className="hover:text-white transition-colors">Privacy</Link>
-                            <Link href="#" className="hover:text-white transition-colors">Terms</Link>
-                            <Link href="#" className="hover:text-white transition-colors">Twitter</Link>
-                        </div>
-                    </div>
-                </footer>
             </main>
         </div>
     );
@@ -158,14 +218,106 @@ export default function LandingPage() {
 
 function FeatureCard({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) {
     return (
-        <div className="p-8 rounded-2xl bg-gradient-to-b from-white/5 to-transparent border border-white/5 hover:border-cyan-500/30 transition-all hover:transform hover:-translate-y-1 group">
-            <div className="mb-6 p-4 rounded-xl bg-gray-900 w-fit border border-gray-800 group-hover:border-cyan-500/30 transition-colors">
+        <div className="p-8 rounded-2xl bg-gradient-to-b from-white/5 to-transparent border border-white/5 hover:border-cyan-500/30 transition-all hover:transform hover:-translate-y-1 group relative overflow-hidden flex flex-col items-center text-center">
+             <div className="absolute inset-0 bg-cyan-500/5 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-500" />
+            <div className="mb-6 p-4 rounded-xl bg-gray-900 w-max border border-gray-800 group-hover:border-cyan-500/30 transition-colors relative z-10">
                 {icon}
             </div>
-            <h3 className="text-xl font-bold text-white mb-3">{title}</h3>
-            <p className="text-gray-400 leading-relaxed">
+            <h3 className="text-xl font-bold text-white mb-3 relative z-10">
+                <ScrambleText text={title} />
+            </h3>
+            <p className="text-gray-400 leading-relaxed relative z-10">
                 {description}
             </p>
         </div>
+    );
+}
+
+function ScrambleText({ text, className = "" }: { text: string, className?: string }) {
+    const [display, setDisplay] = useState(text);
+    const chars = "0123456789abcdef";
+    
+    const scramble = () => {
+        let iterations = 0;
+        const interval = setInterval(() => {
+            setDisplay(
+                text.split("")
+                    .map((letter, index) => {
+                        if (index < iterations) {
+                            return text[index];
+                        }
+                        return chars[Math.floor(Math.random() * chars.length)];
+                    })
+                    .join("")
+            );
+            
+            if (iterations >= text.length) { 
+                clearInterval(interval);
+            }
+            iterations += 0.5; // Faster resolve
+        }, 15); // Faster updates
+    };
+
+    return (
+        <span className={className} onMouseEnter={scramble}>
+            {display}
+        </span>
+    );
+}
+
+function BackgroundHashes() {
+    const [particles] = useState(() => Array.from({ length: 30 }).map((_, i) => ({
+        id: i,
+        top: Math.random() * 100,
+        left: Math.random() * 100,
+        delay: Math.random() * 5
+    })));
+    
+    const refs = useRef<(HTMLDivElement | null)[]>([]);
+
+    useEffect(() => {
+        const chars = "0123456789abcdef";
+        let animationFrameId: number;
+        let lastTime = 0;
+
+        const animate = (time: number) => {
+            // Global throttle: only check updates every 50ms to save CPU
+            if (time - lastTime > 50) {
+                lastTime = time;
+                refs.current.forEach(el => {
+                    // Randomly update only ~10% of particles per tick to keep it light but active
+                    if (el && Math.random() > 0.9) { 
+                        let h = '0x';
+                        for (let j = 0; j < 8; j++) h += chars[Math.floor(Math.random() * 16)];
+                        el.innerText = h;
+                    }
+                });
+            }
+            animationFrameId = requestAnimationFrame(animate);
+        };
+        
+        animationFrameId = requestAnimationFrame(animate);
+        return () => cancelAnimationFrame(animationFrameId);
+    }, []);
+
+    return (
+        <>
+            {particles.map((p, i) => (
+                <div
+                    key={p.id}
+                    ref={el => { refs.current[i] = el; }}
+                    className="absolute font-mono text-[10px] text-cyan-500/40 animate-pulse"
+                    style={{
+                        top: `${p.top}%`,
+                        left: `${p.left}%`,
+                        animationDelay: `${p.delay}s`,
+                        opacity: 0.6,
+                        willChange: 'opacity' // Hint to browser for composition optimization
+                    }}
+                >
+                    0x00000000
+                </div>
+            ))}
+        </>
     );
 }
