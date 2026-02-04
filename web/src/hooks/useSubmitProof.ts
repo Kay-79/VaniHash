@@ -1,6 +1,6 @@
 import { useSignAndExecuteTransaction, useCurrentAccount } from '@mysten/dapp-kit';
 import { Transaction } from '@mysten/sui/transactions';
-import { VANIHASH_PACKAGE_ID, MODULE_NAME } from '@/constants/chain';
+import { VANIHASH_PACKAGE_ID, MODULE_NAME, VANIHASH_FEE_VAULT_ID } from '@/constants/chain';
 
 export function useSubmitProof() {
     const account = useCurrentAccount();
@@ -23,6 +23,7 @@ export function useSubmitProof() {
             arguments: [
                 tx.object(taskId),
                 tx.object(minedObjectId),
+                tx.object(VANIHASH_FEE_VAULT_ID), // FeeVault
                 tx.object('0x6'), // Clock
             ],
         });
