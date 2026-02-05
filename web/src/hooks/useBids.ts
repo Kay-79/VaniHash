@@ -1,6 +1,6 @@
 import { useSignAndExecuteTransaction, useCurrentAccount } from '@mysten/dapp-kit';
 import { Transaction } from '@mysten/sui/transactions';
-import { MARKETPLACE_PACKAGE_ID, BID_POOL_ID, TRANSFER_POLICY_ID } from '@/constants/chain';
+import { MARKETPLACE_PACKAGE_ID, TRANSFER_POLICY_ID } from '@/constants/chain';
 
 export function useBids() {
     const account = useCurrentAccount();
@@ -22,7 +22,6 @@ export function useBids() {
             target: `${MARKETPLACE_PACKAGE_ID}::bids::create_bid`,
             typeArguments: [itemsType],
             arguments: [
-                tx.object(BID_POOL_ID),
                 payment,
                 tx.object(TRANSFER_POLICY_ID), // The Policy ID determines the collection "Target"
             ],
@@ -47,11 +46,10 @@ export function useBids() {
             target: `${MARKETPLACE_PACKAGE_ID}::bids::accept_bid`,
             typeArguments: [itemType],
             arguments: [
-                tx.object(BID_POOL_ID),
+                tx.object(bidId), // Pass the Bid object
                 tx.object(kioskId), // Seller's Kiosk
                 tx.object(kioskCapId), // Seller's Cap
                 tx.object(itemId),
-                tx.object(bidId),
                 tx.object(TRANSFER_POLICY_ID),
             ],
         });
