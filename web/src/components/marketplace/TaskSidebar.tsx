@@ -113,21 +113,23 @@ export function TaskSidebar() {
                 </div>
 
                 {/* Task Type / Difficulty attributes could go here */}
+                {/* Attributes: Item Type */}
                 <div>
-                    <h3 className="text-xs font-semibold uppercase text-gray-500 mb-3 tracking-wider mt-6">Pattern Length</h3>
-                    <div className="grid grid-cols-3 gap-2">
-                        {['4', '5', '6', '7', '8+'].map((len) => {
-                            const isSelected = searchParams.get('length') === len;
+                    <h3 className="text-xs font-semibold uppercase text-gray-500 mb-3 tracking-wider mt-6">Item Type</h3>
+                    <div className="space-y-1">
+                        {['GasObject', 'Package', 'NFT'].map((type) => {
+                            const isSelected = searchParams.get('itemType') === type;
                             return (
                                 <div
-                                    key={len}
-                                    className={`flex items-center justify-center p-2 rounded-md cursor-pointer text-sm border transition-colors ${isSelected
-                                        ? 'bg-blue-500/10 border-blue-500/20 text-blue-500'
-                                        : 'bg-gray-900/50 border-gray-800 text-gray-400 hover:border-gray-700'
+                                    key={type}
+                                    className={`flex items-center justify-between p-2 rounded-md cursor-pointer text-sm transition-colors ${isSelected
+                                        ? 'bg-blue-500/10 text-blue-500'
+                                        : 'hover:bg-gray-800/30 text-gray-400'
                                         }`}
-                                    onClick={() => updateUrl('length', isSelected ? null : len)}
+                                    onClick={() => updateUrl('itemType', isSelected ? null : type)}
                                 >
-                                    {len}
+                                    <span>{type}</span>
+                                    {isSelected && <div className="h-1.5 w-1.5 rounded-full bg-blue-500" />}
                                 </div>
                             );
                         })}

@@ -82,7 +82,7 @@ export default function LandingPage() {
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
                             </span>
-                            LIVE ON SUI TESTNET
+                            FIRST VANITY MINING PROTOCOL ON SUI
                         </div>
 
                         <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-8 bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-gray-500 animate-float leading-[1.1]">

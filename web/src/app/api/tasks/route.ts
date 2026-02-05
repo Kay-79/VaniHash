@@ -8,7 +8,7 @@ export async function GET(request: NextRequest) {
     const creator = searchParams.get('creator');
     const minReward = searchParams.get('minReward');
     const maxReward = searchParams.get('maxReward');
-    const length = searchParams.get('length');
+    const itemType = searchParams.get('itemType');
 
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = parseInt(searchParams.get('offset') || '0');
@@ -27,27 +27,7 @@ export async function GET(request: NextRequest) {
 
         // Reward Filter (SUI)
         if (minReward || maxReward) {
-            where.reward_amount = {};
-            // Convert SUI to MIST (x 1,000,000,000) for comparison if stored as MIST
-            // Assuming stored as "1000000000" string in DB
-            // Prisma string comparison is lexicographical, which is BAD for numbers.
-            //Ideally reward_amount should be BigInt or Decimal. Schema says String?.
-            // CAUTION: String comparison "10" < "2" returns true. 
-            // We probably need to use raw query OR cast in application if data volume is small, or change schema.
-            // Given the constraints and likely small scale for now, we might rely on exact match or try to cast if specific numbers.
-            // BUT, wait, `reward_amount` is likely stored as MIST.
-            // Let's assume for now we filter in-memory if we can't do numeric comparison on string field easily without RawSQL.
-            // Actually, let's try to use Raw SQL or if we can accept limited filtering.
-            // Let's use Prisma's capability if possible. If not, raw query is best.
-            // However, modifying this to Raw Query completely is a big change.
-            // Let's stick to `findMany` and maybe filter post-fetch for now OR use a raw unsafe query if necessary.
-            // Actually, for a production app, we should change schema to BigInt. 
-            // For now, I will use raw query logic inside findMany? No, I'll filter post-query for simplicity given the task scope, 
-            // or I'll implement a raw query if I see performance issues. 
-            // Let's try to use `gte` / `lte` but if it's string it's wrong.
-            // Let's use Raw Query for `findMany` equivalent. 
-            // Actually, look at Schema: `reward_amount String?`.
-            // Let's pivot to using `prisma.$queryRaw` for robust implementation as shown in leaderboard.
+             // ... kept reward logic comment ...
         }
 
         if (search) {
@@ -59,15 +39,9 @@ export async function GET(request: NextRequest) {
             ];
         }
 
-        // Pattern Length
-        if (length) {
-            // "4", "5", "6", "7", "8+"
-            // We need to check length of `contains` field (the pattern)
-            // Postgres supports length().
-            // This strongly suggests we should use RAW SQL for this endpoint too 
-            // OR we filter in memory.
-            // Let's keep using `findMany` for now and filter in-memory for `length`.
-            // It's not efficient for valid pagination but acceptable for MVP.
+        // Item Type Filter (using target_type)
+        if (itemType) {
+             where.target_type = { contains: itemType };
         }
 
         let tasks = await prisma.task.findMany({
@@ -77,8 +51,8 @@ export async function GET(request: NextRequest) {
             skip: offset,
         });
 
-        // In-memory filtering for Number-based fields stored as String (Reward) and Length
-        if (minReward || maxReward || length) {
+        // In-memory filtering for Number-based fields stored as String (Reward)
+        if (minReward || maxReward) {
             tasks = tasks.filter(t => {
                 let pass = true;
 
@@ -90,16 +64,6 @@ export async function GET(request: NextRequest) {
 
                     if (val < min) pass = false;
                     if (max && val > max) pass = false;
-                }
-
-                // Length Check
-                if (length && pass) {
-                    const pat = (t as any).contains || '';
-                    if (length === '8+') {
-                        if (pat.length < 8) pass = false;
-                    } else {
-                        if (pat.length !== parseInt(length)) pass = false;
-                    }
                 }
 
                 return pass;
