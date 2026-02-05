@@ -115,7 +115,7 @@ export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
                             </th>
                             <th className="px-4 py-3 font-medium tracking-wider">Item</th>
                             <th className="px-4 py-3 font-medium tracking-wider text-right">Price</th>
-                            <th className="px-4 py-3 font-medium tracking-wider text-right">Rarity</th>
+                            <th className="px-4 py-3 font-medium tracking-wider text-right">Type</th>
                             <th className="px-4 py-3 font-medium tracking-wider text-right">Owner</th>
                             <th className="px-4 py-3 font-medium tracking-wider text-right">Action</th>
                         </tr>

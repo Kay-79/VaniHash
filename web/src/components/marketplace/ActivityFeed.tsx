@@ -22,6 +22,9 @@ export function ActivityFeed({ mode = 'market' }: ActivityFeedProps) {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        setActivities([]); // Clear previous activities to avoid showing wrong data during transition
+        setLoading(true); // Ensure loading state is active
+
         const fetchActivity = async () => {
             try {
                 const res = await fetch(`/api/activity?mode=${mode}&limit=10`);

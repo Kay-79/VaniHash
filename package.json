@@ -1,20 +1,8 @@
 {
-  "name": "vanihash-root",
-  "version": "1.0.0",
-  "description": "Root scripts for VaniHash project",
-  "scripts": {
-    "db:push": "dotenv -e web/.env -- npx prisma db push --accept-data-loss",
-    "db:reset": "dotenv -e web/.env -- node scripts/reset-db.js",
-    "generate": "dotenv -e web/.env -- npx prisma generate",
-    "studio": "dotenv -e web/.env -- npx prisma studio"
-  },
   "devDependencies": {
-    "@types/pg": "^8.16.0",
-    "dotenv-cli": "^7.3.0",
-    "pg": "^8.18.0",
     "prisma": "^6.3.1"
   },
   "dependencies": {
-    "@prisma/client": "6.3.1"
+    "@prisma/client": "^6.3.1"
   }
 }

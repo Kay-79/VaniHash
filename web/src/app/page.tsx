@@ -4,7 +4,8 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 import { ArrowRight, Cpu, Globe, Zap, Shield, Coins, BarChart3 } from 'lucide-react';
 import { useEffect, useState, useRef } from 'react';
-import { GlobalHeader } from '@/components/layout/GlobalHeader';
+import { FloatingHeader } from '@/components/layout/FloatingHeader';
+import { Footer } from '@/components/layout/Footer';
 
 export default function LandingPage() {
     const [stats, setStats] = useState({ minerReward: '0', marketVolume: '0', miners: '0', tasks: '0' });
@@ -59,27 +60,7 @@ export default function LandingPage() {
             />
 
             {/* Navbar - Floating Glass Pill */}
-            <header className="fixed top-6 left-0 right-0 z-50 flex justify-center pointer-events-none">
-                <div className="bg-[#020617]/70 backdrop-blur-xl border border-white/10 rounded-full px-6 py-3 shadow-[0_0_30px_rgba(37,99,235,0.2)] pointer-events-auto flex items-center gap-8 animate-fade-in-down">
-                    <div className="flex items-center gap-2 mr-4">
-                        <img src="/logo.png" alt="VaniHash" className="h-8 w-8 rounded-lg shadow-lg" />
-                        <span className="text-lg font-bold tracking-tight text-white">VaniHash</span>
-                    </div>
-                    <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-400">
-                        <button onClick={() => scrollToSection('features')} className="hover:text-cyan-400 transition-colors cursor-pointer">Features</button>
-                        <Link href="/tasks" className="hover:text-cyan-400 transition-colors">Tasks</Link>
-                        <Link href="/marketplace" className="hover:text-cyan-400 transition-colors">Market</Link>
-                        <Link href="https://github.com/Kay-79/VaniHash" target="_blank" className="hover:text-cyan-400 transition-colors">GitHub</Link>
-                    </nav>
-                    <div className="pl-4 border-l border-white/10">
-                        <Link href="/tasks">
-                            <Button size="sm" className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold border-none shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all hover:scale-105 rounded-full px-6">
-                                Launch App
-                            </Button>
-                        </Link>
-                    </div>
-                </div>
-            </header>
+            <FloatingHeader />
 
             {/* Main Content */}
             <main className="relative">
@@ -124,7 +105,7 @@ export default function LandingPage() {
                                     <ArrowRight className="ml-2 h-5 w-5" />
                                 </Button>
                             </Link>
-                            <Link href="/docs" target="_blank" className="w-full sm:w-auto">
+                            <Link href="/docs" className="w-full sm:w-auto">
                                 <Button variant="outline" size="lg" className="w-full h-14 px-10 text-lg border-white/20 bg-white/5 hover:bg-white/10 hover:text-white text-white hover:border-white/40 backdrop-blur-md transition-all rounded-full">
                                     Read Docs
                                 </Button>
@@ -164,10 +145,10 @@ export default function LandingPage() {
                         {/* Stats - Glass Cards */}
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6 max-w-6xl mx-auto mb-20 w-full">
                             {[
-                                { label: 'Total Reward Miner', value: `${stats.minerReward} SUI`, icon: Coins, color: 'text-yellow-400' },
-                                { label: 'Volume Trade in Market', value: `${stats.marketVolume} SUI`, icon: BarChart3, color: 'text-green-400' },
+                                { label: 'Total Mined', value: `${stats.minerReward} SUI`, icon: Coins, color: 'text-yellow-400' },
+                                { label: 'Volume Trade', value: `${stats.marketVolume} SUI`, icon: BarChart3, color: 'text-green-400' },
                                 { label: 'Active Miners', value: '120+', icon: Cpu, color: 'text-cyan-400' },
-                                { label: 'Hashes / Sec', value: '4.2 MH/s', icon: Zap, color: 'text-orange-400' },
+                                { label: 'Hashes / Sec', value: '4.2 GH/s', icon: Zap, color: 'text-orange-400' },
                                 { label: 'Tasks Solved', value: `${stats.tasks}+`, icon: Shield, color: 'text-purple-400' },
                             ].map((stat, i) => (
                                 <div key={i} className="group relative p-6 rounded-3xl bg-white/[0.03] border border-white/10 hover:bg-white/[0.06] hover:border-cyan-500/30 transition-all duration-300 hover:-translate-y-1">
@@ -204,18 +185,12 @@ export default function LandingPage() {
                             />
                         </div>
 
-                        {/* Integrated Footer */}
-                        <div className="mt-20 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center text-gray-600 text-sm">
-                            <p>&copy; 2026 VaniHash Protocol.</p>
-                            <div className="flex gap-6 mt-4 md:mt-0">
-                                <Link href="#" className="hover:text-cyan-400 transition-colors">Privacy</Link>
-                                <Link href="#" className="hover:text-cyan-400 transition-colors">Terms</Link>
-                                <Link href="#" className="hover:text-cyan-400 transition-colors">Twitter</Link>
-                            </div>
-                        </div>
+
                     </div>
                 </section>
             </main>
+            
+            <Footer />
         </div>
     );
 }

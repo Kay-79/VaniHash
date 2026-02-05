@@ -16,9 +16,7 @@ function MarketContent() {
     const [viewMode, setViewMode] = useState<'list'>('list'); // Grid view pending
     const [searchTerm, setSearchTerm] = useState('');
 
-    const { listings, loading, refetch } = useFetchListings({
-        status: 'ACTIVE'
-    });
+    const { listings, loading, refetch } = useFetchListings();
 
     return (
         <DashboardLayout activityMode="market">

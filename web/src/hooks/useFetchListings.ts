@@ -34,10 +34,12 @@ export function useFetchListings(options?: UseFetchListingsOptions) {
             if (search) query.set('search', search);
             if (minPrice) query.set('minPrice', minPrice);
             if (maxPrice) query.set('maxPrice', maxPrice);
-            if (itemType) query.set('type', itemType);
+            if (itemType) query.set('itemType', itemType);
 
             // Default to ACTIVE if not specified (though api defaults too)
-            query.set('status', options?.status || 'ACTIVE');
+            // Prioritize URL param 'status', then options.status, then default 'ACTIVE'
+            const statusParam = searchParams.get('status') || options?.status || 'ACTIVE';
+            query.set('status', statusParam);
 
             const res = await fetch(`/api/listings?${query.toString()}`);
 
@@ -59,7 +61,7 @@ export function useFetchListings(options?: UseFetchListingsOptions) {
         } finally {
             setLoading(false);
         }
-    }, [search, minPrice, maxPrice, itemType, options?.limit, options?.status]);
+    }, [search, minPrice, maxPrice, itemType, options?.limit, options?.status, searchParams]);
 
     useEffect(() => {
         fetchListings();

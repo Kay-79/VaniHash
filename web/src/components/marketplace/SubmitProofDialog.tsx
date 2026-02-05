@@ -47,7 +47,7 @@ export function SubmitProofDialog({ taskId, onSuccess }: SubmitProofDialogProps)
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="ml-2 border-blue-500 text-blue-400 hover:bg-blue-900/20">
+                <Button size="sm" className="ml-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold border-none shadow-[0_0_15px_rgba(6,182,212,0.4)] transition-all hover:scale-105 rounded-full px-4">
                     Submit Proof
                 </Button>
             </DialogTrigger>

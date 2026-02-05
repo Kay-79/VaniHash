@@ -14,14 +14,15 @@ import { useCurrentAccount } from '@mysten/dapp-kit';
 import { normalizeSuiAddress } from '@mysten/sui/utils';
 import { toast } from 'sonner';
 
-listing_id: string;
-seller: string;
-kiosk_id: string | null;
-price: string;
-image_url ?: string | null;
-type: string;
-status: string;
-timestamp_ms: number;
+interface Listing {
+    listing_id: string;
+    seller: string;
+    kiosk_id: string | null;
+    price: string;
+    image_url?: string | null;
+    type: string;
+    status: string;
+    timestamp_ms: number;
 }
 
 export default function ItemDetailPage() {

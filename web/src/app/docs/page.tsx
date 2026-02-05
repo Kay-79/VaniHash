@@ -1,20 +1,55 @@
 'use client';
 
-import { GlobalHeader } from "@/components/layout/GlobalHeader";
+import { FloatingHeader } from "@/components/layout/FloatingHeader";
+import { Footer } from "@/components/layout/Footer";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import { Cpu, Globe, Shield, Terminal, Zap, Info, HelpCircle, ArrowRight, BookOpen, Layers, Hammer, Coins } from "lucide-react";
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 export default function DocsPage() {
     const [activeSection, setActiveSection] = useState('intro');
+    const observer = useRef<IntersectionObserver | null>(null);
+
+    useEffect(() => {
+        // Options for the observer
+        const options = {
+            root: null, // viewport
+            rootMargin: '-20% 0px -70% 0px', // Active when element is near the top
+            threshold: 0
+        };
+
+        observer.current = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+                if (entry.isIntersecting) {
+                    setActiveSection(entry.target.id);
+                }
+            });
+        }, options);
+
+        // Sections to observe
+        const sections = ['intro', 'how-it-works', 'mining', 'marketplace', 'tokenomics', 'faq'];
+        
+        sections.forEach((id) => {
+            const element = document.getElementById(id);
+            if (element && observer.current) {
+                observer.current.observe(element);
+            }
+        });
+
+        return () => {
+            if (observer.current) {
+                observer.current.disconnect();
+            }
+        };
+    }, []);
 
     return (
         <div className="min-h-screen bg-[#020617] text-white selection:bg-cyan-500/30 font-sans">
-            <GlobalHeader />
+            <FloatingHeader />
 
             <div className="relative">
                 {/* Background Noise/Gradient */}
@@ -185,7 +220,7 @@ export default function DocsPage() {
                                                 <div>
                                                     <h3 className="text-lg font-bold text-white mb-2">2. Connect the UI</h3>
                                                     <p className="text-gray-400 mb-3">
-                                                        Once the server is running on <code className="bg-white/10 px-1 rounded text-cyan-400">localhost:9876</code>, you can use the hosted Interface.
+                                                        Once the server is running on <code className="bg-white/10 px-1 rounded text-cyan-400">localhost:5173</code>, you can use the hosted Interface.
                                                     </p>
                                                     <div className="flex flex-col sm:flex-row gap-4">
                                                         <Link href="https://sui-id-miner.vercel.app/" target="_blank">
@@ -305,6 +340,51 @@ export default function DocsPage() {
                                 </div>
                             </section>
 
+                            {/* Rewards & Tasks */}
+                            <section id="tokenomics" className="scroll-mt-32">
+                                <h2 className="text-3xl font-bold text-white mb-6 flex items-center gap-3">
+                                    <Coins className="h-8 w-8 text-yellow-400" />
+                                    Rewards & Tasks
+                                </h2>
+                                <Card className="bg-white/[0.02] border-white/10">
+                                    <CardContent className="pt-6 space-y-6">
+                                        <p className="text-gray-300">
+                                            VaniHash empowers a decentralized economy where miners are rewarded for finding rare IDs requested by the community.
+                                        </p>
+                                        
+                                        <div className="grid md:grid-cols-2 gap-6">
+                                            <div className="bg-white/5 rounded-xl p-5 border border-white/10">
+                                                <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                                                    <Shield className="h-5 w-5 text-green-400" />
+                                                    For Buyers (Creators)
+                                                </h3>
+                                                <ul className="space-y-2 text-sm text-gray-400">
+                                                    <li>• Request specific vanity patterns (e.g., <code>0x0000...</code>).</li>
+                                                    <li>• Set a bounty reward in SUI.</li>
+                                                    <li>• Smart contact holds funds securely until the task is solved.</li>
+                                                </ul>
+                                            </div>
+
+                                            <div className="bg-white/5 rounded-xl p-5 border border-white/10">
+                                                <h3 className="text-lg font-bold text-white mb-2 flex items-center gap-2">
+                                                    <Hammer className="h-5 w-5 text-yellow-500" />
+                                                    For Miners (Workers)
+                                                </h3>
+                                                <ul className="space-y-2 text-sm text-gray-400">
+                                                    <li>• Browse active tasks on the dashboard.</li>
+                                                    <li>• Run the miner to find the matching salt.</li>
+                                                    <li>• Submit proof to claim the bounty instantly.</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+
+                                        <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl text-blue-200 text-sm">
+                                            <strong>Fair Distribution:</strong> No pre-mine, no ICO. All rewards come directly from peer-to-peer marketplace activity.
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </section>
+
                             {/* FAQ */}
                             <section id="faq" className="scroll-mt-32">
                                 <h2 className="text-3xl font-bold text-white mb-6 flex items-center gap-3">
@@ -339,10 +419,14 @@ export default function DocsPage() {
                                 </Link>
                             </div>
 
-                        </div>
+
+
+                    </div>
                     </div>
                 </main>
             </div>
+            
+            <Footer />
         </div>
     );
 }

@@ -48,7 +48,7 @@ export default function TaskDetailPage() {
     };
 
     if (loading) return (
-        <DashboardLayout>
+        <DashboardLayout activityMode="tasks">
             <div className="flex items-center justify-center h-96">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500"></div>
             </div>
@@ -56,7 +56,7 @@ export default function TaskDetailPage() {
     );
 
     if (error || !task) return (
-        <DashboardLayout>
+        <DashboardLayout activityMode="tasks">
             <div className="p-12 text-center">
                 <div className="p-4 rounded-full bg-red-500/10 text-red-400 w-fit mx-auto mb-4">
                     <AlertCircle className="h-8 w-8" />

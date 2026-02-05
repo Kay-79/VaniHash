@@ -128,28 +128,7 @@ export function MarketplaceSidebar() {
                     </div>
                 </div>
 
-                 {/* Attributes: Pattern Length */}
-                 <div>
-                    <h3 className="text-xs font-semibold uppercase text-gray-500 mb-3 tracking-wider mt-6">Pattern Length</h3>
-                    <div className="grid grid-cols-3 gap-2">
-                        {['4', '5', '6', '7', '8+'].map((len) => {
-                             const isSelected = searchParams.get('length') === len;
-                             return (
-                                <div 
-                                    key={len} 
-                                    className={`flex items-center justify-center p-2 rounded-md cursor-pointer text-sm border transition-colors ${
-                                        isSelected 
-                                        ? 'bg-yellow-500/10 border-yellow-500/20 text-yellow-500' 
-                                        : 'bg-gray-900/50 border-gray-800 text-gray-400 hover:border-gray-700'
-                                    }`}
-                                    onClick={() => updateUrl('length', isSelected ? null : len)}
-                                >
-                                    {len}
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
+
             </div>
         </div>
     );
