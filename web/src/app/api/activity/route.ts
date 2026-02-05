@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
                 type: l.status === 'SOLD' ? 'SALE' : 'LIST',
                 item: l.listing_id,
                 price: l.price || l.price_sold || '0',
+                image_url: l.image_url,
                 timestamp: Number(l.timestamp_ms || 0),
                 address: l.status === 'SOLD' ? l.buyer : l.seller,
             }));

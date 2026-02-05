@@ -31,7 +31,11 @@ export class DbService {
 
     // --- Listing Operations ---
     async createListing(data: any) {
-        return this.prisma.listing.create({ data });
+        return this.prisma.listing.upsert({
+            where: { listing_id: data.listing_id },
+            update: data,
+            create: data
+        });
     }
 
     async updateListing(listingId: string, data: any) {

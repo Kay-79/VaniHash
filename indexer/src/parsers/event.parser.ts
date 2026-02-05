@@ -1,14 +1,15 @@
-
 import { DbService } from '../services/db.service';
 
-export class EventParser {
-    constructor(private db: DbService) { }
+import { SuiService } from '../services/sui.service';
 
-    async parse(event: any) {
+export class EventParser {
+    constructor(private db: DbService, private suiService: SuiService) { }
+
+    async parse(event: any, manualTimestampMs?: string | number) {
         const eventType = event.type;
         const parsedJson = event.parsedJson;
         const txDigest = event.id.txDigest;
-        const timestampMs = BigInt(event.timestampMs);
+        const timestampMs = BigInt(event.timestampMs || manualTimestampMs || 0);
 
         console.log(`Processing event: ${eventType} from tx ${txDigest}`);
 
@@ -48,10 +49,41 @@ export class EventParser {
 
             } else if (eventType.includes('::kiosk::ItemListed')) {
                 // Handle Standard Kiosk Listing (Filtered by Transaction Source)
+
+                // Fetch Object Display
+                let imageUrl = '';
+                try {
+                    const obj = await this.suiService.getObject(parsedJson.id);
+                    /* console.log(`[EventParser] Fetched object ${parsedJson.id}:`, JSON.stringify(obj.data?.content, null, 2)); */
+                    const display = obj.data?.display?.data;
+                    if (display && typeof display === 'object' && 'image_url' in display) {
+                        imageUrl = String(display.image_url);
+                    } else {
+                        // Fallback to Content Fields (e.g. 'url' or 'image_url')
+                        const content = obj.data?.content;
+                        if (content && content.dataType === 'moveObject') {
+                            const fields = content.fields as any;
+                            if (fields) {
+                                if ('url' in fields) imageUrl = String(fields.url);
+                                else if ('image_url' in fields) imageUrl = String(fields.image_url);
+                                else if ('img_url' in fields) imageUrl = String(fields.img_url);
+
+                                console.log(`[EventParser] Extracted fallback image for ${parsedJson.id}: ${imageUrl}`);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.error(`Failed to fetch display for ${parsedJson.id}`, e);
+                }
+
+                console.log(`[EventParser] Upserting listing ${parsedJson.id} with image: ${imageUrl}`);
+
                 await this.db.createListing({
                     listing_id: parsedJson.id,
-                    seller: parsedJson.kiosk,
+                    seller: event.sender, // The transaction sender is the seller (owner of the Kiosk/Auth)
+                    kiosk_id: parsedJson.kiosk, // The Kiosk ID from the event
                     price: parsedJson.price,
+                    image_url: imageUrl,
                     type: eventType,
                     status: 'ACTIVE',
                     tx_digest: txDigest,

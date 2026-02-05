@@ -9,15 +9,19 @@ import { Button } from '@/components/ui/Button';
 import { mistToSui } from '@/utils/formatters';
 import { ShoppingCart, User, Tag, Clock } from 'lucide-react';
 import { useMarketplace } from '@/hooks/useMarketplace';
+import { useOwnedKiosk } from '@/hooks/useOwnedKiosk';
+import { useCurrentAccount } from '@mysten/dapp-kit';
+import { normalizeSuiAddress } from '@mysten/sui/utils';
 import { toast } from 'sonner';
 
-interface Listing {
-    listing_id: string;
-    seller: string;
-    price: string;
-    type: string;
-    status: string;
-    timestamp_ms: number;
+listing_id: string;
+seller: string;
+kiosk_id: string | null;
+price: string;
+image_url ?: string | null;
+type: string;
+status: string;
+timestamp_ms: number;
 }
 
 export default function ItemDetailPage() {
@@ -26,7 +30,9 @@ export default function ItemDetailPage() {
     const [listing, setListing] = useState<Listing | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const { buy, isPending } = useMarketplace();
+    const { buy, delist, isPending } = useMarketplace();
+    const { kioskId, kioskCapId } = useOwnedKiosk();
+    const account = useCurrentAccount();
 
     useEffect(() => {
         if (!id) return;
@@ -46,7 +52,10 @@ export default function ItemDetailPage() {
     }, [id]);
 
     const handleBuy = () => {
-        if (!listing) return;
+        if (!listing || !listing.kiosk_id) {
+            toast.error("Invalid listing data (missing kiosk ID)");
+            return;
+        }
         const match = listing.type.match(/\<(.+)\>/);
         if (!match) {
             toast.error("Could not determine item type");
@@ -55,9 +64,8 @@ export default function ItemDetailPage() {
         const itemType = match[1];
 
         // The buy function expects: (kioskId, itemId, itemType, priceMist, onSuccess, onError)
-        // For now, using listing_id as both kioskId and itemId (adjust based on your data structure)
         buy(
-            listing.seller,      // kioskId (seller's kiosk)
+            listing.kiosk_id,     // kioskId (actual Kiosk ID)
             listing.listing_id,  // itemId
             itemType,            // itemType
             listing.price,       // priceMist
@@ -66,6 +74,26 @@ export default function ItemDetailPage() {
                 window.location.reload();
             },
             (err) => toast.error("Failed to buy: " + err.message)
+        );
+    };
+
+    const isOwner = listing && account?.address && normalizeSuiAddress(listing.seller) === normalizeSuiAddress(account.address);
+
+    const handleDelist = () => {
+        if (!listing || !kioskId || !kioskCapId) return;
+        const match = listing.type.match(/<(.+)>/);
+        const itemType = match ? match[1] : listing.type;
+
+        delist(
+            kioskId,
+            kioskCapId,
+            listing.listing_id,
+            itemType,
+            () => {
+                toast.success("Item delisted successfully");
+                window.location.reload();
+            },
+            (err) => toast.error("Delist failed: " + err.message)
         );
     };
 
@@ -85,60 +113,114 @@ export default function ItemDetailPage() {
 
     return (
         <DashboardLayout activityMode="market">
-            <div className="max-w-4xl mx-auto p-6 space-y-6">
-                <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold text-white">Item Details</h1>
-                    <Badge variant="outline" className="text-sm">
-                        ID: {listing.listing_id.slice(0, 6)}...{listing.listing_id.slice(-4)}
-                    </Badge>
+            <div className="max-w-6xl mx-auto p-6 space-y-8">
+                {/* Header / Breadcrumb-ish */}
+                <div className="flex flex-col gap-2">
+                    <Button variant="ghost" className="pl-0 w-fit hover:bg-transparent text-gray-500 hover:text-white" onClick={() => window.history.back()}>
+                        &larr; Back to Market
+                    </Button>
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <h1 className="text-2xl md:text-3xl font-bold font-mono text-yellow-500 tracking-tight break-all">
+                            {listing?.listing_id}
+                        </h1>
+                        <Badge variant="outline" className="w-fit text-sm border-gray-700 text-gray-400">
+                            Type: {listing?.type.split('<')[1]?.replace('>', '').split('::').pop() || 'Unknown'}
+                        </Badge>
+                    </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {/* Visual / Main */}
-                    <Card className="bg-gray-900 border-gray-800 flex items-center justify-center min-h-[300px]">
-                        <div className="text-center">
-                            <Tag className="h-24 w-24 text-yellow-500 mx-auto mb-4 opacity-80" />
-                            <h2 className="text-xl font-mono text-white break-all px-8">
-                                {listing.type.split('<')[1]?.replace('>', '') || 'Unknown Item'}
-                            </h2>
-                        </div>
-                    </Card>
-
-                    {/* Details */}
-                    <div className="space-y-6">
-                        <Card className="bg-gray-900/50 border-gray-800">
-                            <CardHeader>
-                                <CardTitle className="text-gray-400 text-sm uppercase">Info</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-4">
-                                <div className="flex justify-between items-center p-3 bg-black/20 rounded">
-                                    <span className="text-gray-500 flex items-center gap-2"><User className="h-4 w-4" /> Seller</span>
-                                    <span className="text-blue-400 font-mono text-sm truncate max-w-[150px]">{listing.seller}</span>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    {/* Visual / Main Image - Left Side (5 cols) */}
+                    <div className="lg:col-span-5">
+                        <Card className="bg-black/40 border-gray-800 overflow-hidden aspect-square flex items-center justify-center relative group">
+                            {listing?.image_url ? (
+                                <img
+                                    src={listing.image_url}
+                                    alt="NFT"
+                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                                />
+                            ) : (
+                                <div className="text-center">
+                                    <Tag className="h-24 w-24 text-gray-700 mx-auto mb-4" />
+                                    <span className="text-gray-600 font-mono">No Preview</span>
                                 </div>
-                                <div className="flex justify-between items-center p-3 bg-black/20 rounded">
-                                    <span className="text-gray-500 flex items-center gap-2"><Clock className="h-4 w-4" /> Listed At</span>
-                                    <span className="text-gray-300 text-sm">
-                                        {new Date(Number(listing.timestamp_ms)).toLocaleDateString()}
-                                    </span>
+                            )}
+                        </Card>
+                    </div>
+
+                    {/* Details - Right Side (7 cols) */}
+                    <div className="lg:col-span-7 space-y-6">
+
+                        {/* Price Card */}
+                        <Card className="bg-gray-900/60 border-gray-800 backdrop-blur-sm">
+                            <CardContent className="p-8">
+                                <div className="flex flex-col gap-2">
+                                    <p className="text-sm text-gray-400 font-medium uppercase tracking-wider">Current Price</p>
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-5xl font-black text-white tracking-tight">{mistToSui(listing.price)}</span>
+                                        <span className="text-xl text-yellow-500 font-bold">SUI</span>
+                                    </div>
+                                </div>
+
+                                <div className="mt-8 flex gap-4">
+                                    {isOwner ? (
+                                        <Button
+                                            size="lg"
+                                            variant="destructive"
+                                            className="flex-1 border border-red-900 bg-red-900/20 hover:bg-red-900/40 text-red-500 font-bold h-11 text-base"
+                                            onClick={handleDelist}
+                                            disabled={isPending || listing.status !== 'ACTIVE'}
+                                        >
+                                            {isPending ? 'Processing...' : 'Cancel Listing'}
+                                        </Button>
+                                    ) : (
+                                        <Button
+                                            size="lg"
+                                            className="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black font-bold h-11 text-base"
+                                            onClick={handleBuy}
+                                            disabled={isPending || listing.status !== 'ACTIVE'}
+                                        >
+                                            <ShoppingCart className="mr-2 h-5 w-5" />
+                                            {isPending ? 'Processing...' : 'Purchase Now'}
+                                        </Button>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>
 
-                        <Card className="bg-gray-900/50 border-gray-800">
-                            <CardContent className="p-6">
-                                <p className="text-sm text-gray-500 mb-1">Price</p>
-                                <p className="text-3xl font-bold text-white mb-6">
-                                    {mistToSui(listing.price)} <span className="text-yellow-500 text-lg">SUI</span>
-                                </p>
-                                <Button
-                                    size="lg"
-                                    className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-bold"
-                                    onClick={handleBuy}
-                                    disabled={isPending || listing.status !== 'ACTIVE'}
-                                >
-                                    <ShoppingCart className="mr-2 h-5 w-5" />
-                                    {isPending ? 'Processing...' : 'Buy Now'}
-                                </Button>
+                        {/* Info Grid */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <Card className="bg-gray-900/40 border-gray-800 p-4">
+                                <span className="text-gray-500 text-xs uppercase block mb-1">Seller</span>
+                                <div className="flex items-center gap-2">
+                                    <div className="h-6 w-6 rounded-full bg-gradient-to-br from-purple-500 to-blue-500"></div>
+                                    <span className="text-blue-400 font-mono text-sm truncate" title={listing.seller}>
+                                        {listing.seller.slice(0, 8)}...{listing.seller.slice(-8)}
+                                    </span>
+                                </div>
+                            </Card>
+
+                            <Card className="bg-gray-900/40 border-gray-800 p-4">
+                                <span className="text-gray-500 text-xs uppercase block mb-1">Listed</span>
+                                <div className="flex items-center gap-2 text-gray-300">
+                                    <Clock className="h-4 w-4" />
+                                    <span className="text-sm font-medium">
+                                        {new Date(Number(listing.timestamp_ms)).toLocaleDateString()}
+                                    </span>
+                                </div>
+                            </Card>
+                        </div>
+
+                        {/* Attributes (Placeholder for now) */}
+                        <Card className="bg-gray-900/40 border-gray-800">
+                            <CardHeader>
+                                <CardTitle className="text-gray-400 text-sm uppercase">Attributes</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="flex flex-wrap gap-2">
+                                    <Badge variant="secondary" className="bg-gray-800 text-gray-300 hover:bg-gray-700">Type: {listing.type.split('::').pop()?.replace('>', '')}</Badge>
+                                    <Badge variant="secondary" className="bg-gray-800 text-gray-300 hover:bg-gray-700">Status: {listing.status}</Badge>
+                                </div>
                             </CardContent>
                         </Card>
                     </div>

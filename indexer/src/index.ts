@@ -7,7 +7,7 @@ import { CONFIG } from './config';
 async function main() {
     const suiService = new SuiService();
     const dbService = new DbService();
-    const eventParser = new EventParser(dbService);
+    const eventParser = new EventParser(dbService, suiService);
 
     console.log(`Starting Indexer Service...`);
     console.log(`VaniHash Package: ${CONFIG.VANIHASH_PACKAGE_ID}`);
@@ -56,36 +56,39 @@ async function main() {
             // We need a separate cursor for Marketplace.
 
             // 2. Poll Marketplace Transactions (Filtered by Module Interaction)
+            // 2. Poll Marketplace Transactions (Filtered by Function Name)
+            // Due to RPC strictness, we must poll each function separately if using cursors
             if (CONFIG.MARKETPLACE_PACKAGE_ID) {
-                let marketTxCursor = await dbService.getCursor('market_tx_cursor')
-                    .then(c => c ? c.tx_digest : undefined); // Txs cursor is often just a digest/string in SDK depending on version, check Type. 
-                // Actually queryTransactionBlocks cursor is string (txDigest).
+                const chunks = ['list', 'delist', 'purchase'];
 
-                // Use the new queryTransactionBlocks method
-                const marketTxs = await suiService.queryTransactionBlocks(
-                    CONFIG.MARKETPLACE_PACKAGE_ID,
-                    CONFIG.MODULE_MARKET,
-                    marketTxCursor || undefined
-                );
+                for (const func of chunks) {
+                    const cursorKey = `market_tx_cursor_${func}`;
+                    let marketTxCursor = await dbService.getCursor(cursorKey)
+                        .then(c => c ? c.tx_digest : undefined);
 
-                for (const tx of marketTxs.data) {
-                    if (tx.events) {
-                        for (const event of tx.events) {
-                            // We pass the event to the parser. 
-                            // The parser logic for Kiosk events checks the event type string.
-                            // Since we are iterating TXs that interacted with OUR market module,
-                            // any Kiosk event here is relevant.
-                            await eventParser.parse(event);
+                    const marketTxs = await suiService.queryTransactionBlocks(
+                        CONFIG.MARKETPLACE_PACKAGE_ID,
+                        CONFIG.MODULE_MARKET,
+                        func,
+                        marketTxCursor || undefined
+                    );
+
+                    for (const tx of marketTxs.data) {
+                        if (tx.events) {
+                            for (const event of tx.events) {
+                                await eventParser.parse(event, tx.timestampMs);
+                            }
                         }
                     }
-                }
 
-                if (marketTxs.hasNextPage && marketTxs.nextCursor) {
-                    marketTxCursor = marketTxs.nextCursor;
-                    // We save the cursor. For Txs, we might store it as tx_digest.
-                    // dbService.saveCursor expects (id, txDigest, eventSeq). 
-                    // Transaction cursor is usually just a string (digest). We can pass 0 or null for eventSeq.
-                    await dbService.saveCursor('market_tx_cursor', marketTxCursor!, 0);
+                    if (marketTxs.hasNextPage && marketTxs.nextCursor) {
+                        marketTxCursor = marketTxs.nextCursor;
+                        await dbService.saveCursor(cursorKey, marketTxCursor!, '0');
+                    } else if (marketTxs.data.length > 0) {
+                        const lastTx = marketTxs.data[marketTxs.data.length - 1];
+                        marketTxCursor = lastTx.digest;
+                        await dbService.saveCursor(cursorKey, marketTxCursor!, '0');
+                    }
                 }
             }
 

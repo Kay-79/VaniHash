@@ -8,7 +8,7 @@ export const CONFIG = {
 
     // Core Packages
     VANIHASH_PACKAGE_ID: '0x0e9eeb64deb8b10b20de2b93b083b2a90f4e38004debdfe3b2f39384c8b08a74',
-    MARKETPLACE_PACKAGE_ID: '0x88f4b069d8213e8d2543997195d988cc8b9f0237936a2818619379857d4554b7', // Deployed on Testnet
+    MARKETPLACE_PACKAGE_ID: '0x782da4a3113f28bc9be9ff86ea766d08827eb3855d0069b5d86d2c4494b78e5d', // Deployed on Testnet
 
     // Module Names
     MODULE_VANIHASH: 'vanihash',

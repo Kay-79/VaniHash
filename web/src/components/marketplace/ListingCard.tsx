@@ -11,6 +11,7 @@ interface Listing {
     listing_id: string;
     seller: string;
     price: string;
+    image_url?: string | null;
     type: string;
     status: string;
     timestamp_ms: number;
@@ -68,14 +69,21 @@ export function ListingCard({ listing, onBuySuccess }: ListingCardProps) {
             onClick={() => router.push(`/item/${listing.listing_id}`)}
         >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                    Listing
+                <CardTitle className="text-sm font-bold font-mono text-yellow-500 truncate" title={listing.listing_id}>
+                    {shortenAddress(listing.listing_id)}
                 </CardTitle>
                 <div onClick={copyId} className="cursor-pointer hover:text-white transition-colors">
                     <Copy className="h-4 w-4 text-muted-foreground" />
                 </div>
             </CardHeader>
             <CardContent>
+                <div className="w-full aspect-square bg-gray-900 rounded-md mb-4 overflow-hidden flex items-center justify-center border border-gray-800">
+                    {listing.image_url ? (
+                        <img src={listing.image_url} alt="Item" className="w-full h-full object-cover" />
+                    ) : (
+                        <div className="text-gray-600 font-mono text-xs">No Image</div>
+                    )}
+                </div>
                 <div className="text-2xl font-bold">{mistToSui(listing.price)} SUI</div>
                 <p className="text-xs text-muted-foreground truncate">
                     Seller: {shortenAddress(listing.seller)}

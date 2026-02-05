@@ -8,12 +8,14 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { useOwnedKiosk } from "@/hooks/useOwnedKiosk";
+import { useCurrentAccount } from "@mysten/dapp-kit";
 import { normalizeSuiAddress } from "@mysten/sui/utils";
 
 interface Listing {
     listing_id: string;
     seller: string;
     price: string;
+    image_url?: string | null;
     type: string;
     status: string;
     timestamp_ms: number;
@@ -27,6 +29,7 @@ interface ListingTableProps {
 export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
     const { buy, delist, isPending } = useMarketplace();
     const { kioskId, kioskCapId } = useOwnedKiosk();
+    const account = useCurrentAccount();
     const router = useRouter();
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
@@ -140,8 +143,12 @@ export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
                                     </td>
                                     <td className="px-4 py-3">
                                         <div className="flex items-center gap-3">
-                                            <div className="h-10 w-10 rounded bg-gray-800 flex items-center justify-center border border-gray-700">
-                                                <div className="text-[10px] text-gray-500 font-mono">IMG</div>
+                                            <div className="h-10 w-10 rounded bg-gray-800 flex items-center justify-center border border-gray-700 overflow-hidden">
+                                                {listing.image_url ? (
+                                                    <img src={listing.image_url} alt="Item" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <div className="text-[10px] text-gray-500 font-mono">IMG</div>
+                                                )}
                                             </div>
                                             <div>
                                                 <div className="font-medium text-gray-200">
@@ -170,7 +177,7 @@ export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
                                     </td>
                                     <td className="px-4 py-3 text-right">
                                         <div className="flex items-center justify-end gap-2">
-                                            {listing.seller === kioskId ? (
+                                            {listing.seller === normalizeSuiAddress(account?.address || '') ? (
                                                 <Button
                                                     size="sm"
                                                     variant="destructive"

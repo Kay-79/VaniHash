@@ -12,6 +12,7 @@ interface ActivityItem {
     type: string;
     item: string;
     price: string;
+    image_url?: string;
     timestamp: number;
     address: string;
 }
@@ -70,8 +71,12 @@ export function ActivityFeed({ mode = 'market' }: ActivityFeedProps) {
                             </span>
                         </div>
                         <div className="flex items-center gap-3 mt-2">
-                            <div className="h-10 w-10 rounded bg-gray-800 flex items-center justify-center text-xs text-gray-500">
-                                {mode === 'market' ? 'IMG' : 'JOB'}
+                            <div className="h-10 w-10 rounded bg-gray-800 flex items-center justify-center text-xs text-gray-500 overflow-hidden border border-gray-700">
+                                {act.image_url ? (
+                                    <img src={act.image_url} alt="Item" className="w-full h-full object-cover" />
+                                ) : (
+                                    <span>{mode === 'market' ? 'IMG' : 'JOB'}</span>
+                                )}
                             </div>
                             <div className="flex-1 min-w-0">
                                 <Link href={mode === 'market' ? `/listing/${act.item}` : `/task/${act.item}`} className="block truncate text-sm font-medium text-gray-300 group-hover:text-white transition-colors hover:underline">

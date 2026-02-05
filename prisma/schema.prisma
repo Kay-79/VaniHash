@@ -45,7 +45,9 @@ model Listing {
   id           String   @id @default(uuid())
   listing_id   String   @unique
   seller       String?
+  kiosk_id     String?
   price        String?
+  image_url    String? // Display Image URL
   type         String?
   status       String?
   buyer        String?

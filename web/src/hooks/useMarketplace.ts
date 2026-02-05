@@ -1,6 +1,6 @@
 import { useSignAndExecuteTransaction, useCurrentAccount } from '@mysten/dapp-kit';
 import { Transaction } from '@mysten/sui/transactions';
-import { MARKETPLACE_PACKAGE_ID, TRANSFER_POLICY_ID } from '@/constants/chain';
+import { MARKETPLACE_PACKAGE_ID, TRANSFER_POLICY_ID, MARKETPLACE_FEE_VAULT_ID } from '@/constants/chain';
 
 export function useMarketplace() {
     const account = useCurrentAccount();
@@ -79,6 +79,7 @@ export function useMarketplace() {
                 tx.pure.u64(priceMist), // The List Price
                 payment,
                 tx.object(TRANSFER_POLICY_ID), // Needed for confirmation
+                tx.object(MARKETPLACE_FEE_VAULT_ID)
             ],
         });
 

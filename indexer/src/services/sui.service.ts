@@ -20,10 +20,21 @@ export class SuiService {
         });
     }
 
-    async queryTransactionBlocks(packageId: string, moduleName: string, cursor?: string) {
+    async getObject(id: string) {
+        return this.client.getObject({
+            id,
+            options: {
+                showContent: true,
+                showDisplay: true,
+                showType: true
+            }
+        });
+    }
+
+    async queryTransactionBlocks(packageId: string, moduleName: string, functionName?: string, cursor?: string) {
         return this.client.queryTransactionBlocks({
             filter: {
-                MoveFunction: { package: packageId, module: moduleName }
+                MoveFunction: { package: packageId, module: moduleName, function: functionName }
             },
             cursor,
             limit: 50,

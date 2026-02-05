@@ -6,10 +6,13 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
     try {
         // 1. Floor Price: Min price of active listings (status = 'ACTIVE')
-        const floorPrice = await prisma.listing.aggregate({
-            _min: { price: true },
-            where: { status: 'ACTIVE' }
-        });
+        // 1. Floor Price: Min price of active listings (status = 'ACTIVE')
+        const floorPriceQuery = await prisma.$queryRaw`
+            SELECT MIN(CAST(price as BIGINT)) as min_price
+            FROM listings
+            WHERE status = 'ACTIVE'
+        ` as any[];
+        const floorPrice = floorPriceQuery[0]?.min_price || BigInt(0);
 
         // 2. Listed Count: Count of active listings
         const listedCount = await prisma.listing.count({
@@ -64,7 +67,7 @@ export async function GET(request: NextRequest) {
         const topBid = 0;
 
         return NextResponse.json({
-            floorPrice: floorPrice._min.price || '0',
+            floorPrice: floorPrice.toString(),
             topBid: topBid.toString(),
             volume24h: volume24h.toString(),
             avgSale: avgSale.toString(),
