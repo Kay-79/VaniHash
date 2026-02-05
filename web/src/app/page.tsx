@@ -66,7 +66,8 @@ export default function LandingPage() {
                     </div>
                     <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-400">
                         <button onClick={() => scrollToSection('features')} className="hover:text-cyan-400 transition-colors cursor-pointer">Features</button>
-                        <Link href="/marketplace" className="hover:text-cyan-400 transition-colors">Marketplace</Link>
+                        <Link href="/tasks" className="hover:text-cyan-400 transition-colors">Tasks</Link>
+                        <Link href="/marketplace" className="hover:text-cyan-400 transition-colors">Market</Link>
                         <Link href="https://github.com/Kay-79/VaniHash" target="_blank" className="hover:text-cyan-400 transition-colors">GitHub</Link>
                     </nav>
                     <div className="pl-4 border-l border-white/10">
@@ -266,13 +267,34 @@ function ScrambleText({ text, className = "" }: { text: string, className?: stri
 }
 
 function BackgroundHashes() {
-    const [particles] = useState(() => Array.from({ length: 30 }).map((_, i) => ({
-        id: i,
-        top: Math.random() * 100,
-        left: Math.random() * 100,
-        delay: Math.random() * 5
-    })));
+    const [particles, setParticles] = useState<{id: number, top: number, left: number, delay: number}[]>([]);
     
+    useEffect(() => {
+        // Generate a pool of 100 candidate positions (10x10 grid) to ensure good distribution
+        const candidates = [];
+        for (let i = 0; i < 100; i++) {
+            const row = Math.floor(i / 10);
+            const col = i % 10;
+            candidates.push({
+                top: (row * 10) + Math.random() * 10, // 10% vertical slots with jitter
+                left: (col * 10) + Math.random() * 10, // 10% horizontal slots with jitter
+            });
+        }
+
+        // Shuffle and pick 30
+        const selected = candidates
+            .sort(() => Math.random() - 0.5)
+            .slice(0, 30)
+            .map((pos, i) => ({
+                id: i,
+                top: pos.top,
+                left: pos.left,
+                delay: Math.random() * 5
+            }));
+
+        setParticles(selected);
+    }, []);
+
     const refs = useRef<(HTMLDivElement | null)[]>([]);
 
     useEffect(() => {

@@ -61,7 +61,7 @@ export function GlobalHeader() {
                         href="/marketplace"
                         className={cn("transition-colors hover:text-white", isActive('/marketplace') ? "text-yellow-500 font-bold" : "")}
                     >
-                        Trading
+                        Market
                     </Link>
                     <Link
                         href="/create"

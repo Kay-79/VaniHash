@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 
-function TradingContent() {
+function MarketContent() {
     const account = useCurrentAccount();
     const [viewMode, setViewMode] = useState<'list'>('list'); // Grid view pending
     const [searchTerm, setSearchTerm] = useState('');
@@ -78,7 +78,7 @@ export default function MarketplacePage() {
                 </div>
             </DashboardLayout>
         }>
-            <TradingContent />
+            <MarketContent />
         </Suspense>
     );
 }
