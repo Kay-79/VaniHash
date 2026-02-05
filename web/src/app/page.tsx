@@ -7,7 +7,7 @@ import { useEffect, useState, useRef } from 'react';
 import { GlobalHeader } from '@/components/layout/GlobalHeader';
 
 export default function LandingPage() {
-    const [stats, setStats] = useState({ volume: '0', miners: '0', tasks: '0' });
+    const [stats, setStats] = useState({ minerReward: '0', marketVolume: '0', miners: '0', tasks: '0' });
     const containerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -29,9 +29,10 @@ export default function LandingPage() {
             .then(res => res.json())
             .then(data => {
                 setStats({
-                    volume: (Number(data.volume24h || 0) / 1e9).toFixed(0),
+                    minerReward: (Number(data.totalMinerReward || 0) / 1e9).toFixed(0),
+                    marketVolume: (Number(data.totalMarketVolume || 0) / 1e9).toFixed(0),
                     miners: (data.listedCount || 0).toString(),
-                    tasks: '1240' // Mock or fetch real
+                    tasks: data.tasksSolved ? data.tasksSolved.toString() : '1240'
                 });
             })
             .catch(console.error);
@@ -45,12 +46,12 @@ export default function LandingPage() {
     };
 
     return (
-        <div 
+        <div
             ref={containerRef}
             className="h-screen bg-[#020617] text-white selection:bg-cyan-500/30 font-sans overflow-y-auto snap-y snap-mandatory scroll-smooth perspective-1000 relative"
         >
             {/* Mouse Spotlight Effect */}
-            <div 
+            <div
                 className="pointer-events-none fixed inset-0 z-0 transition-opacity duration-300 opacity-100"
                 style={{
                     background: 'radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgba(6,182,212,0.10), transparent 40%)',
@@ -71,7 +72,7 @@ export default function LandingPage() {
                         <Link href="https://github.com/Kay-79/VaniHash" target="_blank" className="hover:text-cyan-400 transition-colors">GitHub</Link>
                     </nav>
                     <div className="pl-4 border-l border-white/10">
-                         <Link href="/tasks">
+                        <Link href="/tasks">
                             <Button size="sm" className="bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold border-none shadow-[0_0_20px_rgba(6,182,212,0.4)] transition-all hover:scale-105 rounded-full px-6">
                                 Launch App
                             </Button>
@@ -79,10 +80,10 @@ export default function LandingPage() {
                     </div>
                 </div>
             </header>
-            
+
             {/* Main Content */}
             <main className="relative">
-                 {/* Background Hashes (Random Mining Effect) - Scrolls with content */}
+                {/* Background Hashes (Random Mining Effect) - Scrolls with content */}
                 <div className="absolute inset-0 pointer-events-none z-[1] overflow-hidden">
                     <BackgroundHashes />
                 </div>
@@ -112,7 +113,7 @@ export default function LandingPage() {
 
                         <p className="text-lg md:text-2xl text-gray-400 max-w-3xl mx-auto mb-12 leading-relaxed font-light">
                             The universal vanity mining protocol.
-                            Mine custom IDs for <strong className="text-white font-semibold">any</strong> object, token, NFT, or package. 
+                            Mine custom IDs for <strong className="text-white font-semibold">any</strong> object, token, NFT, or package.
                             Trade your rare IDs instantly.
                         </p>
 
@@ -123,7 +124,7 @@ export default function LandingPage() {
                                     <ArrowRight className="ml-2 h-5 w-5" />
                                 </Button>
                             </Link>
-                            <Link href="https://docs.sui.io" target="_blank" className="w-full sm:w-auto">
+                            <Link href="/docs" target="_blank" className="w-full sm:w-auto">
                                 <Button variant="outline" size="lg" className="w-full h-14 px-10 text-lg border-white/20 bg-white/5 hover:bg-white/10 hover:text-white text-white hover:border-white/40 backdrop-blur-md transition-all rounded-full">
                                     Read Docs
                                 </Button>
@@ -132,7 +133,7 @@ export default function LandingPage() {
                     </div>
 
                     {/* Scroll Indicator */}
-                    <div onClick={() => scrollToSection('features')} className="absolute bottom-12 left-1/2 -translate-x-1/2 animate-bounce cursor-pointer z-20 group p-4">
+                    <div onClick={() => scrollToSection('features')} className="absolute bottom-0 left-1/2 -translate-x-1/2 animate-bounce cursor-pointer z-20 group p-4">
                         <div className="flex flex-col items-center gap-3 text-gray-500 group-hover:text-cyan-400 transition-colors duration-300">
                             <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Explore</span>
                             <div className="w-6 h-10 rounded-full border-2 border-current flex justify-center p-1">
@@ -146,11 +147,11 @@ export default function LandingPage() {
                 <section id="features" className="min-h-screen w-full relative flex flex-col justify-center py-20 bg-black/40 border-t border-white/5 snap-start">
                     {/* Background Grid */}
                     <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay" />
-                    
+
                     <div className="container mx-auto px-6 relative z-10 h-full flex flex-col justify-center">
-                        
+
                         {/* Title */}
-                        <div className="text-center mb-16">
+                        <div className="text-center mb-12 mt-6">
                             <h2 className="text-4xl md:text-5xl font-black text-white mb-6">
                                 Power Your <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">Web3 Identity</span>
                             </h2>
@@ -158,14 +159,16 @@ export default function LandingPage() {
                                 The most advanced vanity Ids mining protocol, built for speed and universality.
                             </p>
                         </div>
-                        
+
+
                         {/* Stats - Glass Cards */}
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 max-w-5xl mx-auto mb-20 w-full">
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-6 max-w-6xl mx-auto mb-20 w-full">
                             {[
-                                { label: 'Total Volume', value: `${stats.volume} SUI`, icon: Coins, color: 'text-yellow-400' },
+                                { label: 'Total Reward Miner', value: `${stats.minerReward} SUI`, icon: Coins, color: 'text-yellow-400' },
+                                { label: 'Volume Trade in Market', value: `${stats.marketVolume} SUI`, icon: BarChart3, color: 'text-green-400' },
                                 { label: 'Active Miners', value: '120+', icon: Cpu, color: 'text-cyan-400' },
                                 { label: 'Hashes / Sec', value: '4.2 MH/s', icon: Zap, color: 'text-orange-400' },
-                                { label: 'Tasks Solved', value: '1,240+', icon: Shield, color: 'text-purple-400' },
+                                { label: 'Tasks Solved', value: `${stats.tasks}+`, icon: Shield, color: 'text-purple-400' },
                             ].map((stat, i) => (
                                 <div key={i} className="group relative p-6 rounded-3xl bg-white/[0.03] border border-white/10 hover:bg-white/[0.06] hover:border-cyan-500/30 transition-all duration-300 hover:-translate-y-1">
                                     <div className={`mb-3 p-3 rounded-2xl bg-white/5 w-fit ${stat.color} group-hover:scale-110 transition-transform`}>
@@ -182,7 +185,7 @@ export default function LandingPage() {
                             <FeatureCard
                                 icon={<Cpu className="h-6 w-6 text-cyan-400" />}
                                 title="Universal Mining"
-                                description="Support for Objects, Packages, NFTs, Kiosks, everything ID on Sui."
+                                description="Support all IDswrite on Sui."
                             />
                             <FeatureCard
                                 icon={<Globe className="h-6 w-6 text-blue-500" />}
@@ -220,7 +223,7 @@ export default function LandingPage() {
 function FeatureCard({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) {
     return (
         <div className="p-8 rounded-2xl bg-gradient-to-b from-white/5 to-transparent border border-white/5 hover:border-cyan-500/30 transition-all hover:transform hover:-translate-y-1 group relative overflow-hidden flex flex-col items-center text-center">
-             <div className="absolute inset-0 bg-cyan-500/5 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-500" />
+            <div className="absolute inset-0 bg-cyan-500/5 translate-y-[100%] group-hover:translate-y-0 transition-transform duration-500" />
             <div className="mb-6 p-4 rounded-xl bg-gray-900 w-max border border-gray-800 group-hover:border-cyan-500/30 transition-colors relative z-10">
                 {icon}
             </div>
@@ -237,7 +240,7 @@ function FeatureCard({ icon, title, description }: { icon: React.ReactNode, titl
 function ScrambleText({ text, className = "" }: { text: string, className?: string }) {
     const [display, setDisplay] = useState(text);
     const chars = "0123456789abcdef";
-    
+
     const scramble = () => {
         let iterations = 0;
         const interval = setInterval(() => {
@@ -251,8 +254,8 @@ function ScrambleText({ text, className = "" }: { text: string, className?: stri
                     })
                     .join("")
             );
-            
-            if (iterations >= text.length) { 
+
+            if (iterations >= text.length) {
                 clearInterval(interval);
             }
             iterations += 0.5; // Faster resolve
@@ -267,8 +270,8 @@ function ScrambleText({ text, className = "" }: { text: string, className?: stri
 }
 
 function BackgroundHashes() {
-    const [particles, setParticles] = useState<{id: number, top: number, left: number, delay: number}[]>([]);
-    
+    const [particles, setParticles] = useState<{ id: number, top: number, left: number, delay: number }[]>([]);
+
     useEffect(() => {
         // Generate a pool of 100 candidate positions (10x10 grid) to ensure good distribution
         const candidates = [];
@@ -308,7 +311,7 @@ function BackgroundHashes() {
                 lastTime = time;
                 refs.current.forEach(el => {
                     // Randomly update only ~10% of particles per tick to keep it light but active
-                    if (el && Math.random() > 0.9) { 
+                    if (el && Math.random() > 0.9) {
                         let h = '0x';
                         for (let j = 0; j < 8; j++) h += chars[Math.floor(Math.random() * 16)];
                         el.innerText = h;
@@ -317,7 +320,7 @@ function BackgroundHashes() {
             }
             animationFrameId = requestAnimationFrame(animate);
         };
-        
+
         animationFrameId = requestAnimationFrame(animate);
         return () => cancelAnimationFrame(animationFrameId);
     }, []);

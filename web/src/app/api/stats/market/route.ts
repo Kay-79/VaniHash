@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
 
         const volume24h = volumeQuery[0]?.volume || BigInt(0);
 
-        // 4. Avg Sale: Average price of all sold listings (or last 24h? usually all time or check requirement. Let's do all time or 24h? "Avg Sale" implies general market price. Let's do all time for now or last 100 sales)
+        // 4. Avg Sale: Average price of all sold listings
         const avgSaleQuery = await prisma.$queryRaw`
             SELECT AVG(CAST(price_sold AS BIGINT)) as avg_price
             FROM listings
@@ -39,7 +39,28 @@ export async function GET(request: NextRequest) {
 
         const avgSale = avgSaleQuery[0]?.avg_price || 0;
 
-        // 5. Top Bid: Placeholder for now as we don't index bids yet
+        // 5. Total Miner Reward: Sum of reward_amount for completed tasks
+        const totalMinerRewardQuery = await prisma.$queryRaw`
+            SELECT SUM(CAST(reward_amount AS BIGINT)) as total_reward
+            FROM tasks
+            WHERE status = 'COMPLETED'
+        ` as any[];
+        const totalMinerReward = totalMinerRewardQuery[0]?.total_reward || BigInt(0);
+
+        // 6. Total Market Volume: Sum of price_sold for all sold listings
+        const totalMarketVolumeQuery = await prisma.$queryRaw`
+            SELECT SUM(CAST(price_sold AS BIGINT)) as volume
+            FROM listings
+            WHERE status = 'SOLD'
+        ` as any[];
+        const totalMarketVolume = totalMarketVolumeQuery[0]?.volume || BigInt(0);
+
+        // 7. Tasks Solved: Count of completed tasks
+        const tasksSolved = await prisma.task.count({
+            where: { status: 'COMPLETED' }
+        });
+
+        // 8. Top Bid: Placeholder for now as we don't index bids yet
         const topBid = 0;
 
         return NextResponse.json({
@@ -48,6 +69,9 @@ export async function GET(request: NextRequest) {
             volume24h: volume24h.toString(),
             avgSale: avgSale.toString(),
             listedCount: listedCount,
+            totalMinerReward: totalMinerReward.toString(),
+            totalMarketVolume: totalMarketVolume.toString(),
+            tasksSolved,
             // Mocking % changes for now as we don't have historical snapshots
             volumeChange: 12.5,
             listedChange: 2.4
