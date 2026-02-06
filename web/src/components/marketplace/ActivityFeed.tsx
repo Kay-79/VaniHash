@@ -1,7 +1,8 @@
-import { Activity, ExternalLink } from "lucide-react";
+import { Activity } from "lucide-react";
 import { useEffect, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import Link from 'next/link';
+import { getTaskIcon, getTaskLabel } from '@/utils/taskType';
 
 interface ActivityFeedProps {
     mode?: 'market' | 'tasks';
@@ -15,6 +16,8 @@ interface ActivityItem {
     image_url?: string;
     timestamp: number;
     address: string;
+    task_type?: number; // 0 = Object, 1 = Package
+    target_type?: string;
 }
 
 export function ActivityFeed({ mode = 'market' }: ActivityFeedProps) {
@@ -78,7 +81,7 @@ export function ActivityFeed({ mode = 'market' }: ActivityFeedProps) {
                                 {act.image_url ? (
                                     <img src={act.image_url} alt="Item" className="w-full h-full object-cover" />
                                 ) : (
-                                    <span>{mode === 'market' ? 'IMG' : 'JOB'}</span>
+                                    mode === 'tasks' ? getTaskIcon({ taskType: act.task_type, targetType: act.target_type, className: "w-5 h-5" }) : <span>IMG</span>
                                 )}
                             </div>
                             <div className="flex-1 min-w-0">
@@ -86,11 +89,18 @@ export function ActivityFeed({ mode = 'market' }: ActivityFeedProps) {
                                     {act.item}
                                 </Link>
 
-                                {act.price && act.price !== '0' && (
-                                    <p className="text-sm font-bold text-white">
-                                        {formatPrice(act.price)} SUI
-                                    </p>
-                                )}
+                                <div className="flex items-center justify-between gap-2">
+                                    {act.price && act.price !== '0' && (
+                                        <p className="text-sm font-bold text-white">
+                                            {formatPrice(act.price)} SUI
+                                        </p>
+                                    )}
+                                    {mode === 'tasks' && (
+                                        <span className="text-[10px] text-gray-500 bg-gray-800/50 px-1.5 py-0.5 rounded border border-gray-700/50">
+                                            {getTaskLabel(act.task_type, act.target_type)}
+                                        </span>
+                                    )}
+                                </div>
                             </div>
                         </div>
                     </div>

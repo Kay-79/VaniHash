@@ -16,6 +16,6 @@ export const CONFIG = {
     MODULE_BIDS: 'bids',
 
     // Indexer Settings
-    POLL_INTERVAL_MS: 3000,
-    ERROR_RETRY_MS: 60000,
+    POLL_INTERVAL_MS: 30000,
+    ERROR_RETRY_MS: 120000,
 };

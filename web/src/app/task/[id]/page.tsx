@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Task, TaskStatus } from '@/types';
 import { mistToSui, formatStruct, shortenAddress } from '@/utils/formatters';
-import { AlertCircle, Copy, Cpu, Clock, ShieldCheck, User, Calendar, Coins, Hash, Box } from 'lucide-react';
+import { AlertCircle, Copy, Cpu, Clock, ShieldCheck, User, Calendar, Coins, Hash, Box, Package } from 'lucide-react';
 import { SubmitProofDialog } from '@/components/marketplace/SubmitProofDialog';
 import { TaskStatusBadge } from '@/components/marketplace/TaskStatusBadge';
 import { shouldBeActive, isInGracePeriod, formatTimeRemaining, getGracePeriodRemaining } from '@/utils/gracePeriod';
@@ -15,6 +15,7 @@ import { useCurrentAccount } from '@mysten/dapp-kit';
 import { useCancelTask } from '@/hooks/useCancelTask';
 import { Button } from '@/components/ui/Button';
 import { toast } from 'sonner';
+import { getTaskIcon, getTaskLabel } from '@/utils/taskType';
 
 export default function TaskDetailPage() {
     const params = useParams();
@@ -211,20 +212,26 @@ export default function TaskDetailPage() {
 
                                 <div className="mt-6 flex flex-col md:flex-row gap-4">
                                     <div className="flex-1 p-4 rounded-xl bg-gray-900/40 border border-gray-800 flex items-center gap-3">
-                                        <div className="p-2 rounded bg-purple-500/10 text-purple-400">
-                                            <Box className="h-5 w-5" />
+                                        <div className="h-10 w-10 flex items-center justify-center">
+                                            {getTaskIcon({ taskType: task.task_type, targetType: task.target_type, className: "w-6 h-6" })}
                                         </div>
                                         <div className="overflow-hidden">
-                                            <p className="text-xs text-gray-500 uppercase">Object Type</p>
+                                            <p className="text-xs text-gray-500 uppercase">
+                                                {getTaskLabel(task.task_type, task.target_type)}
+                                            </p>
                                             <div className="flex items-center gap-2">
                                                 <p className="text-sm font-mono text-gray-300 truncate">
-                                                    {task.target_type ? formatStruct(task.target_type) : (task.task_type === 1 ? 'Package' : 'Object')}
+                                                    {task.task_type === 1 ? 'Upgrade Cap' :
+                                                        task.target_type ? formatStruct(task.target_type) : 'Standard Object'}
                                                 </p>
-                                                {task.target_type && (
+                                                {(task.target_type || task.task_type === 1) && (
                                                     <Copy
                                                         className="h-3 w-3 text-gray-600 hover:text-white cursor-pointer flex-shrink-0"
                                                         onClick={() => {
-                                                            navigator.clipboard.writeText(task.target_type || "");
+                                                            const textToCopy = task.task_type === 1
+                                                                ? '0x2::package::UpgradeCap'
+                                                                : (task.target_type || "");
+                                                            navigator.clipboard.writeText(textToCopy);
                                                             toast.success("Type copied");
                                                         }}
                                                     />

@@ -189,7 +189,7 @@ export default function LandingPage() {
                     </div>
                 </section>
             </main>
-            
+
             <Footer />
         </div>
     );
@@ -218,6 +218,9 @@ function ScrambleText({ text, className = "" }: { text: string, className?: stri
 
     const scramble = () => {
         let iterations = 0;
+        let velocity = 0.1; // Start slow
+        const acceleration = 0.05; // Accelerate each frame
+
         const interval = setInterval(() => {
             setDisplay(
                 text.split("")
@@ -233,8 +236,10 @@ function ScrambleText({ text, className = "" }: { text: string, className?: stri
             if (iterations >= text.length) {
                 clearInterval(interval);
             }
-            iterations += 0.5; // Faster resolve
-        }, 15); // Faster updates
+
+            iterations += velocity;
+            velocity += acceleration;
+        }, 20); // Base tick rate
     };
 
     return (

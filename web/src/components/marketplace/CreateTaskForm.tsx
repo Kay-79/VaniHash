@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/Label';
 import { validatePattern } from '@/utils/validators';
 import { Box, Package, Check, Info } from 'lucide-react';
 import { Tooltip } from '@/components/ui/Tooltip';
+import { UPGRADE_CAP_TYPE, SUI_GAS_TYPE_SHORT } from '@/utils/taskType';
 
 interface CreateTaskFormProps {
     onTaskCreated?: () => void;
@@ -21,7 +22,7 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
     const [suffixPattern, setSuffixPattern] = useState('');
     const [containsPattern, setContainsPattern] = useState('');
     const [reward, setReward] = useState('0.01');
-    const [taskType, setTaskType] = useState<'object' | 'package'>('object');
+    const [taskType, setTaskType] = useState<'object' | 'gas' | 'package'>('gas');
     const [targetType, setTargetType] = useState('0x2::coin::Coin<0x2::sui::SUI>');
     const [lockDurationHours, setLockDurationHours] = useState('24');
     const [bytecode, setBytecode] = useState<Uint8Array>(new Uint8Array());
@@ -84,14 +85,19 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
             // 1 = PACKAGE (package ID mining)
             const lockDurationMs = Math.floor(Number(lockDurationHours) * 60 * 60 * 1000);
 
-            // Use 'u8' for package type dummy if needed, but for now we default object type
-            const finalTargetType = taskType === 'package' ? '0x2::coin::Coin<0x2::sui::SUI>' : targetType;
+            // Determine final target type
+            let finalTargetType = targetType;
+            if (taskType === 'package') {
+                finalTargetType = '0x2::package::UpgradeCap'; // Correct type for Package tasks
+            } else if (taskType === 'gas') {
+                finalTargetType = '0x2::coin::Coin<0x2::sui::SUI>'; // Fixed for Gas
+            }
 
             await createTask(
                 prefixPattern,
                 suffixPattern,
                 containsPattern,
-                taskType === 'package' ? 1 : 0,  // task_type parameter
+                taskType === 'package' ? 1 : 0,  // task_type parameter (gas is also object type 0)
                 reward,
                 lockDurationMs,
                 bytecode, // Pass bytecode
@@ -104,6 +110,7 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
                     setSuffixPattern('');
                     setContainsPattern('');
                     setLockDurationHours('24');
+                    setTaskType('gas');
                     setTargetType('0x2::coin::Coin<0x2::sui::SUI>');
                 },
                 (error) => {
@@ -128,38 +135,17 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
                 <div>
                     <div className="flex items-center gap-2 mb-3">
                         <Label className="text-gray-400 block">Task Type</Label>
-                        <Tooltip content="Choose 'Object' to mine vanity IDs for NFTs/Coins, or 'Package' to mine vanity addresses for Smart Contracts.">
+                        <Tooltip content="Choose valid mining typs.">
                             <Info className="w-4 h-4 text-gray-500 hover:text-white cursor-help" />
                         </Tooltip>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {/* Object Selection */}
-                        <div
-                            onClick={() => setTaskType('object')}
-                            className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all hover:bg-white/5 ${taskType === 'object'
-                                ? 'border-blue-500 bg-blue-500/10'
-                                : 'border-gray-800 bg-black/40'
-                                }`}
-                        >
-                            {taskType === 'object' && (
-                                <div className="absolute top-2 right-2 bg-blue-500 rounded-full p-0.5">
-                                    <Check className="w-3 h-3 text-white" />
-                                </div>
-                            )}
-                            <div className="flex items-center gap-3 mb-2">
-                                <div className={`p-2 rounded-lg ${taskType === 'object' ? 'bg-blue-500/20 text-blue-400' : 'bg-gray-800 text-gray-400'}`}>
-                                    <Box className="w-5 h-5" />
-                                </div>
-                                <h3 className={`font-semibold ${taskType === 'object' ? 'text-white' : 'text-gray-300'}`}>Object ID</h3>
-                            </div>
-                            <p className="text-sm text-gray-500 leading-tight">
-                                Mine a vanity ID for standard objects like Coins, NFTs, or Gas objects.
-                            </p>
-                        </div>
-
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         {/* Package Selection */}
                         <div
-                            onClick={() => setTaskType('package')}
+                            onClick={() => {
+                                setTaskType('package');
+                                setTargetType('');
+                            }}
                             className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all hover:bg-white/5 ${taskType === 'package'
                                 ? 'border-purple-500 bg-purple-500/10'
                                 : 'border-gray-800 bg-black/40'
@@ -176,8 +162,62 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
                                 </div>
                                 <h3 className={`font-semibold ${taskType === 'package' ? 'text-white' : 'text-gray-300'}`}>Package ID</h3>
                             </div>
-                            <p className="text-sm text-gray-500 leading-tight">
+                            <p className="text-xs text-gray-500 leading-tight">
                                 Mine a vanity Address for publishing Move packages.
+                            </p>
+                        </div>
+
+                        {/* Gas Object Selection */}
+                        <div
+                            onClick={() => {
+                                setTaskType('gas');
+                                setTargetType(SUI_GAS_TYPE_SHORT);
+                            }}
+                            className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all hover:bg-white/5 ${taskType === 'gas'
+                                ? 'border-blue-500 bg-blue-500/10'
+                                : 'border-gray-800 bg-black/40'
+                                }`}
+                        >
+                            {taskType === 'gas' && (
+                                <div className="absolute top-2 right-2 bg-blue-500 rounded-full p-0.5">
+                                    <Check className="w-3 h-3 text-white" />
+                                </div>
+                            )}
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className={`p-2 rounded-lg ${taskType === 'gas' ? 'bg-blue-500/20' : 'bg-gray-800'}`}>
+                                    <img src="https://docs.sui.io/img/logo.svg" alt="Sui" className="w-5 h-5" />
+                                </div>
+                                <h3 className={`font-semibold ${taskType === 'gas' ? 'text-white' : 'text-gray-300'}`}>Gas Object</h3>
+                            </div>
+                            <p className="text-xs text-gray-500 leading-tight">
+                                Mine a vanity ID for a standard SUI Gas Coin.
+                            </p>
+                        </div>
+
+                        {/* Object Selection */}
+                        <div
+                            onClick={() => {
+                                setTaskType('object');
+                                setTargetType('');
+                            }}
+                            className={`relative p-4 rounded-xl border-2 cursor-pointer transition-all hover:bg-white/5 ${taskType === 'object'
+                                ? 'border-cyan-500 bg-cyan-500/10'
+                                : 'border-gray-800 bg-black/40'
+                                }`}
+                        >
+                            {taskType === 'object' && (
+                                <div className="absolute top-2 right-2 bg-cyan-500 rounded-full p-0.5">
+                                    <Check className="w-3 h-3 text-white" />
+                                </div>
+                            )}
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className={`p-2 rounded-lg ${taskType === 'object' ? 'bg-cyan-500/20 text-cyan-400' : 'bg-gray-800 text-gray-400'}`}>
+                                    <Box className="w-5 h-5" />
+                                </div>
+                                <h3 className={`font-semibold ${taskType === 'object' ? 'text-white' : 'text-gray-300'}`}>Other Objects</h3>
+                            </div>
+                            <p className="text-xs text-gray-500 leading-tight">
+                                Mine a vanity ID for any other Object (NFTs, etc).
                             </p>
                         </div>
                     </div>
@@ -229,7 +269,7 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
 
                 <div className="space-y-3">
                     <p className="text-sm text-gray-400">
-                        Add up to 3 patterns (one per type). The {taskType === 'package' ? 'Package ID' : 'object ID'} must contain all specified patterns.
+                        Add up to 3 patterns (one per type). The {taskType === 'package' ? 'Package ID' : 'ID'} must contain all specified patterns.
                     </p>
 
                     {/* Prefix Pattern */}

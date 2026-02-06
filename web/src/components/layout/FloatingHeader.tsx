@@ -30,7 +30,8 @@ export function FloatingHeader() {
                     <button onClick={handleFeaturesClick} className="hover:text-cyan-400 transition-colors cursor-pointer">Features</button>
                     <Link href="/tasks" className="hover:text-cyan-400 transition-colors">Tasks</Link>
                     <Link href="/marketplace" className="hover:text-cyan-400 transition-colors">Market</Link>
-                    <Link href="https://github.com/Kay-79/VaniHash" target="_blank" className="hover:text-cyan-400 transition-colors">GitHub</Link>
+                    {/* <Link href="https://github.com/Kay-79/VaniHash" target="_blank" className="hover:text-cyan-400 transition-colors">GitHub</Link> */}
+                    <Link href="/docs" className="hover:text-cyan-400 transition-colors">Docs</Link>
                 </nav>
                 <div className="pl-4 border-l border-white/10">
                     <Link href="/tasks">
@@ -43,3 +44,4 @@ export function FloatingHeader() {
         </header>
     );
 }
+

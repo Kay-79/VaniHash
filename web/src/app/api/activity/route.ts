@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
                 take: limit,
             });
 
-            activities = listings.map(l => ({
+            activities = listings.map((l: any) => ({
                 id: l.id,
                 type: l.status === 'SOLD' ? 'SALE' : 'LIST',
                 item: l.listing_id,
@@ -41,6 +41,8 @@ export async function GET(request: NextRequest) {
                 price: t.reward_amount || '0',
                 timestamp: Number(t.timestamp_ms || 0),
                 address: t.status === 'COMPLETED' ? t.completer : t.creator,
+                task_type: t.task_type,
+                target_type: t.target_type,
             }));
         }
 
