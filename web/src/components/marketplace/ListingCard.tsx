@@ -27,13 +27,18 @@ export function ListingCard({ listing, onBuySuccess }: ListingCardProps) {
 
     const router = useRouter();
 
+    // Check if listing is a SUI coin
+    const isSuiCoin = listing.type?.includes('0x2::sui::SUI') ||
+        listing.type?.includes('0x2::coin::Coin<0x2::sui::SUI>') ||
+        listing.type?.includes('Coin<0x2::sui::SUI>');
+
     const handleBuy = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
         // Parse type from event string "::marketplace::ItemListed<0x...>"
         // This is a bit hacky, ideally indexer stores inner type cleanly.
         // Format: ...ItemListed<TYPE>
-        const match = listing.type.match(/\<(.+)\>/);
+        const match = listing.type.match(/<(.+)>/);
         if (!match) {
             toast.error("Could not determine item type");
             return;
@@ -80,6 +85,11 @@ export function ListingCard({ listing, onBuySuccess }: ListingCardProps) {
                 <div className="w-full aspect-square bg-gray-900 rounded-md mb-4 overflow-hidden flex items-center justify-center border border-gray-800">
                     {listing.image_url ? (
                         <img src={listing.image_url} alt="Item" className="w-full h-full object-cover" />
+                    ) : isSuiCoin ? (
+                        <div className="flex flex-col items-center gap-2">
+                            <img src="https://docs.sui.io/img/logo.svg" alt="SUI" className="w-16 h-16" />
+                            <span className="text-xs text-gray-400 font-medium">SUI Coin</span>
+                        </div>
                     ) : (
                         <div className="text-gray-600 font-mono text-xs">No Image</div>
                     )}

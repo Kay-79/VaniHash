@@ -18,6 +18,7 @@ interface ActivityItem {
     address: string;
     task_type?: number; // 0 = Object, 1 = Package
     target_type?: string;
+    listing_type?: string; // The actual object type for market listings
 }
 
 export function ActivityFeed({ mode = 'market' }: ActivityFeedProps) {
@@ -60,51 +61,63 @@ export function ActivityFeed({ mode = 'market' }: ActivityFeedProps) {
             </div>
 
             <div className="divide-y divide-gray-800/50">
-                {activities.map((act, i) => (
-                    <div key={i} className="p-4 hover:bg-white/5 transition-colors cursor-pointer group">
-                        <div className="flex items-center justify-between mb-1">
-                            <span className={`text-xs font-bold px-2 py-0.5 rounded ${act.type === 'SALE' || act.type === 'TASK_COMPLETED' ? 'bg-green-500/20 text-green-400' :
-                                act.type === 'LIST' || act.type === 'TASK_CREATED' ? 'bg-blue-500/20 text-blue-400' :
-                                    'bg-purple-500/20 text-purple-400'
-                                }`}>
-                                {act.type === 'SALE' ? 'SOLD' :
-                                    act.type === 'LIST' ? 'LISTED' :
-                                        act.type === 'TASK_CREATED' ? 'NEW TASK' :
-                                            act.type === 'TASK_COMPLETED' ? 'COMPLETED' : 'WORKER'}
-                            </span>
-                            <span className="text-xs text-gray-500">
-                                {act.timestamp ? formatDistanceToNow(act.timestamp) + ' ago' : 'Recently'}
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-3 mt-2">
-                            <div className="h-10 w-10 rounded bg-gray-800 flex items-center justify-center text-xs text-gray-500 overflow-hidden border border-gray-700">
-                                {act.image_url ? (
-                                    <img src={act.image_url} alt="Item" className="w-full h-full object-cover" />
-                                ) : (
-                                    mode === 'tasks' ? getTaskIcon({ taskType: act.task_type, targetType: act.target_type, className: "w-5 h-5" }) : <span>IMG</span>
-                                )}
+                {activities.map((act, i) => {
+                    // Check if this is a SUI coin listing
+                    const isSuiCoin = act.listing_type?.includes('0x2::sui::SUI') ||
+                        act.target_type?.includes('0x2::sui::SUI') ||
+                        act.target_type?.includes('Coin<0x2::sui::SUI>');
+                    return (
+                        <div key={i} className="p-4 hover:bg-white/5 transition-colors cursor-pointer group">
+                            <div className="flex items-center justify-between mb-1">
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded ${act.type === 'SALE' || act.type === 'TASK_COMPLETED' ? 'bg-green-500/20 text-green-400' :
+                                    act.type === 'LIST' || act.type === 'TASK_CREATED' ? 'bg-blue-500/20 text-blue-400' :
+                                        act.type === 'DELIST' ? 'bg-red-500/20 text-red-400' :
+                                            'bg-purple-500/20 text-purple-400'
+                                    }`}>
+                                    {act.type === 'SALE' ? 'SOLD' :
+                                        act.type === 'LIST' ? 'LISTED' :
+                                            act.type === 'DELIST' ? 'DELISTED' :
+                                                act.type === 'TASK_CREATED' ? 'NEW TASK' :
+                                                    act.type === 'TASK_COMPLETED' ? 'COMPLETED' : 'WORKER'}
+                                </span>
+                                <span className="text-xs text-gray-500">
+                                    {act.timestamp ? formatDistanceToNow(act.timestamp) + ' ago' : 'Recently'}
+                                </span>
                             </div>
-                            <div className="flex-1 min-w-0">
-                                <Link href={mode === 'market' ? `/listing/${act.item}` : `/task/${act.item}`} className="block truncate text-sm font-medium text-gray-300 group-hover:text-white transition-colors hover:underline">
-                                    {act.item}
-                                </Link>
+                            <div className="flex items-center gap-3 mt-2">
+                                <div className="h-10 w-10 rounded bg-gray-800 flex items-center justify-center text-xs text-gray-500 overflow-hidden border border-gray-700">
+                                    {act.image_url ? (
+                                        <img src={act.image_url} alt="Item" className="w-full h-full object-cover" />
+                                    ) : mode === 'tasks' ? (
+                                        getTaskIcon({ taskType: act.task_type, targetType: act.target_type, className: "w-5 h-5" })
+                                    ) : isSuiCoin ? (
+                                        <img src="https://docs.sui.io/img/logo.svg" alt="SUI" className="w-6 h-6" />
+                                    ) : (
+                                        <span>IMG</span>
+                                    )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <Link href={mode === 'market' ? `/item/${act.item}` : `/task/${act.item}`} className="block truncate text-sm font-medium text-gray-300 group-hover:text-white transition-colors hover:underline">
+                                        {act.item}
+                                    </Link>
 
-                                <div className="flex items-center justify-between gap-2">
-                                    {act.price && act.price !== '0' && (
-                                        <p className="text-sm font-bold text-white">
-                                            {formatPrice(act.price)} SUI
-                                        </p>
-                                    )}
-                                    {mode === 'tasks' && (
-                                        <span className="text-[10px] text-gray-500 bg-gray-800/50 px-1.5 py-0.5 rounded border border-gray-700/50">
-                                            {getTaskLabel(act.task_type, act.target_type)}
-                                        </span>
-                                    )}
+                                    <div className="flex items-center justify-between gap-2">
+                                        {act.price && act.price !== '0' && (
+                                            <p className="text-sm font-bold text-white">
+                                                {formatPrice(act.price)} SUI
+                                            </p>
+                                        )}
+                                        {mode === 'tasks' && (
+                                            <span className="text-[10px] text-gray-500 bg-gray-800/50 px-1.5 py-0.5 rounded border border-gray-700/50">
+                                                {getTaskLabel(act.task_type, act.target_type)}
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
                 {activities.length === 0 && !loading && (
                     <div className="p-8 text-center text-gray-500 text-sm">
                         No activity yet

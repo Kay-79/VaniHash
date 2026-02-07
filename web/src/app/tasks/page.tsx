@@ -4,14 +4,12 @@ import { useState, Suspense } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { TaskList } from '@/components/marketplace/TaskList';
 import { useFetchTasks } from '@/hooks/useFetchTasks';
-import { LayoutGrid, List, ArrowUpDown } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import { ArrowUpDown } from 'lucide-react';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { MinerStats } from '@/components/miner/MinerStats';
 
 function MarketplaceContent() {
     const account = useCurrentAccount();
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
     const [sortBy, setSortBy] = useState<'time' | 'reward'>('time');
 
     // Tab State: 'market' | 'my_tasks' | 'history'
@@ -91,29 +89,9 @@ function MarketplaceContent() {
                                 </select>
                             </div>
 
-                            {/* View Mode Toggle */}
-                            <div className="flex items-center gap-1 bg-gray-900/50 p-1 rounded-lg border border-gray-800">
-                                <Button
-                                    variant={viewMode === 'grid' ? "secondary" : "ghost"}
-                                    size="sm"
-                                    className={`h-8 w-8 p-0 ${viewMode === 'grid' ? 'bg-gray-800 text-blue-500' : 'text-gray-500'}`}
-                                    onClick={() => setViewMode('grid')}
-                                >
-                                    <LayoutGrid className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                    variant={viewMode === 'list' ? "secondary" : "ghost"}
-                                    size="sm"
-                                    className={`h-8 w-8 p-0 ${viewMode === 'list' ? 'bg-gray-800 text-blue-500' : 'text-gray-500'}`}
-                                    onClick={() => setViewMode('list')}
-                                >
-                                    <List className="h-4 w-4" />
-                                </Button>
-                            </div>
-
                             <button
                                 onClick={refetch}
-                                className="text-sm text-blue-400 hover:text-blue-300 transition-colors ml-2"
+                                className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
                             >
                                 Refresh
                             </button>
@@ -121,7 +99,7 @@ function MarketplaceContent() {
                     </div>
 
                     <div className="bg-gray-900/30 rounded-lg p-1">
-                        <TaskList tasks={sortedTasks} loading={loading} viewMode={viewMode} />
+                        <TaskList tasks={sortedTasks} loading={loading} viewMode="list" />
                     </div>
                 </div>
             </div>

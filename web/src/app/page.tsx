@@ -129,34 +129,6 @@ export default function LandingPage() {
                     </div>
                 </section>
 
-                {/* Section: Demo Video */}
-                <section id="demo" className="min-h-screen w-full relative flex flex-col justify-center items-center py-20 snap-start">
-                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-cyan-900/10 via-[#020617] to-[#020617] z-0" />
-
-                    <div className="container mx-auto px-6 relative z-10 text-center mt-6">
-                        <h2 className="text-4xl md:text-5xl font-black text-white mb-4">
-                            See VaniHash in <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">Action</span>
-                        </h2>
-                        <p className="text-gray-400 max-w-2xl mx-auto mb-12 text-lg">
-                            Watch how easy it is to create custom vanity IDs for your Sui objects
-                        </p>
-
-                        {/* YouTube Embed */}
-                        <div className="max-w-4xl mx-auto aspect-video rounded-2xl overflow-hidden border border-white/10 shadow-[0_0_60px_rgba(6,182,212,0.2)]">
-                            <iframe
-                                width="100%"
-                                height="100%"
-                                src="https://www.youtube.com/embed/SVllDADVxiE"
-                                title="VaniHash Demo"
-                                frameBorder="0"
-                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                                allowFullScreen
-                                className="w-full h-full"
-                            />
-                        </div>
-                    </div>
-                </section>
-
                 {/* Section 2: Stats & Features (Full Height, Snaps) */}
                 <section id="features" className="min-h-screen w-full relative flex flex-col justify-center py-20 bg-black/40 border-t border-white/5 snap-start">
                     {/* Background Grid */}
@@ -219,6 +191,34 @@ export default function LandingPage() {
                         </div>
 
 
+                    </div>
+                </section>
+
+                {/* Section: Demo Video */}
+                <section id="demo" className="min-h-screen w-full relative flex flex-col justify-center items-center py-20 snap-start">
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-cyan-900/10 via-[#020617] to-[#020617] z-0" />
+
+                    <div className="container mx-auto px-6 relative z-10 text-center mt-6">
+                        <h2 className="text-4xl md:text-5xl font-black text-white mb-4">
+                            See VaniHash in <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">Action</span>
+                        </h2>
+                        <p className="text-gray-400 max-w-2xl mx-auto mb-12 text-lg">
+                            Watch how easy it is to create custom vanity IDs for your Sui objects
+                        </p>
+
+                        {/* YouTube Embed */}
+                        <div className="max-w-4xl mx-auto aspect-video rounded-2xl overflow-hidden border border-white/10 shadow-[0_0_60px_rgba(6,182,212,0.2)]">
+                            <iframe
+                                width="100%"
+                                height="100%"
+                                src="https://www.youtube.com/embed/SVllDADVxiE"
+                                title="VaniHash Demo"
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowFullScreen
+                                className="w-full h-full"
+                            />
+                        </div>
                     </div>
                 </section>
             </main>

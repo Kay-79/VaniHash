@@ -146,6 +146,8 @@ export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
                                             <div className="h-10 w-10 rounded bg-gray-800 flex items-center justify-center border border-gray-700 overflow-hidden">
                                                 {listing.image_url ? (
                                                     <img src={listing.image_url} alt="Item" className="w-full h-full object-cover" />
+                                                ) : listing.type?.includes('0x2::sui::SUI') ? (
+                                                    <img src="https://docs.sui.io/img/logo.svg" alt="SUI" className="w-6 h-6" />
                                                 ) : (
                                                     <div className="text-[10px] text-gray-500 font-mono">IMG</div>
                                                 )}

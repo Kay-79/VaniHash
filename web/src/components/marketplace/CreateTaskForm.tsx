@@ -79,6 +79,30 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
             return;
         }
 
+        // Validate total pattern length (Sui object ID = 64 hex chars)
+        const totalPatternLength = prefixPattern.length + suffixPattern.length + containsPattern.length;
+        const maxLength = 64; // Sui object ID is 32 bytes = 64 hex characters
+        if (totalPatternLength > maxLength) {
+            toast.error(`Total pattern length (${totalPatternLength}) exceeds object ID length (${maxLength} hex chars)`);
+            return;
+        }
+
+        // Validate contains is not already in prefix or suffix
+        if (containsPattern && prefixPattern && prefixPattern.includes(containsPattern)) {
+            toast.error('Contains pattern is already included in prefix');
+            return;
+        }
+        if (containsPattern && suffixPattern && suffixPattern.includes(containsPattern)) {
+            toast.error('Contains pattern is already included in suffix');
+            return;
+        }
+
+        // Require bytecode for package tasks
+        if (taskType === 'package' && bytecode.length === 0) {
+            toast.error('Package bytecode is required for package mining tasks');
+            return;
+        }
+
         try {
             // Note: Current contract accepts task_type parameter
             // 0 = OBJECT (regular object mining)
@@ -268,9 +292,19 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
                 )}
 
                 <div className="space-y-3">
-                    <p className="text-sm text-gray-400">
-                        Add up to 3 patterns (one per type). The {taskType === 'package' ? 'Package ID' : 'ID'} must contain all specified patterns.
-                    </p>
+                    <div className="flex items-center justify-between">
+                        <p className="text-sm text-gray-400">
+                            Add up to 3 patterns (one per type). The {taskType === 'package' ? 'Package ID' : 'ID'} must contain all specified patterns.
+                        </p>
+                        <div className={`text-xs font-mono px-2 py-1 rounded ${(prefixPattern.length + suffixPattern.length + containsPattern.length) > 64
+                            ? 'bg-red-500/20 text-red-400'
+                            : (prefixPattern.length + suffixPattern.length + containsPattern.length) > 48
+                                ? 'bg-yellow-500/20 text-yellow-400'
+                                : 'bg-gray-800 text-gray-400'
+                            }`}>
+                            {prefixPattern.length + suffixPattern.length + containsPattern.length}/64
+                        </div>
+                    </div>
 
                     {/* Prefix Pattern */}
                     <div>
@@ -293,6 +327,28 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
                                 }`}
                         />
                         {prefixError && <p className="text-red-500 text-xs mt-1">{prefixError}</p>}
+                    </div>
+                    {/* Contains Pattern */}
+                    <div>
+                        <Label htmlFor="contains" className="text-gray-400 flex items-center gap-2">
+                            <span className="inline-block w-20">Contains</span>
+                            <span className="text-xs text-gray-500">(anywhere)</span>
+                            <Tooltip content="The vanity ID must contain this hex sequence somewhere in the middle.">
+                                <Info className="w-4 h-4 text-gray-500 hover:text-white cursor-help ml-1" />
+                            </Tooltip>
+                        </Label>
+                        <Input
+                            id="contains"
+                            value={containsPattern}
+                            onChange={(e) => {
+                                setContainsPattern(e.target.value.toLowerCase());
+                                validateInput(e.target.value, setContainsError);
+                            }}
+                            placeholder="e.g. 8888, beef"
+                            className={`mt-1 bg-black/40 border-gray-800 text-white placeholder:text-gray-600 focus:ring-blue-500/50 font-mono ${containsError ? 'border-red-500' : ''
+                                }`}
+                        />
+                        {containsError && <p className="text-red-500 text-xs mt-1">{containsError}</p>}
                     </div>
 
                     {/* Suffix Pattern */}
@@ -318,28 +374,7 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
                         {suffixError && <p className="text-red-500 text-xs mt-1">{suffixError}</p>}
                     </div>
 
-                    {/* Contains Pattern */}
-                    <div>
-                        <Label htmlFor="contains" className="text-gray-400 flex items-center gap-2">
-                            <span className="inline-block w-20">Contains</span>
-                            <span className="text-xs text-gray-500">(anywhere)</span>
-                            <Tooltip content="The vanity ID must contain this hex sequence somewhere in the middle.">
-                                <Info className="w-4 h-4 text-gray-500 hover:text-white cursor-help ml-1" />
-                            </Tooltip>
-                        </Label>
-                        <Input
-                            id="contains"
-                            value={containsPattern}
-                            onChange={(e) => {
-                                setContainsPattern(e.target.value.toLowerCase());
-                                validateInput(e.target.value, setContainsError);
-                            }}
-                            placeholder="e.g. 8888, beef"
-                            className={`mt-1 bg-black/40 border-gray-800 text-white placeholder:text-gray-600 focus:ring-blue-500/50 font-mono ${containsError ? 'border-red-500' : ''
-                                }`}
-                        />
-                        {containsError && <p className="text-red-500 text-xs mt-1">{containsError}</p>}
-                    </div>
+
                 </div>
 
                 <div>

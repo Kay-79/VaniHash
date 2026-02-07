@@ -56,29 +56,34 @@ export function useMarketplace() {
         if (!account) throw new Error("Wallet not connected");
         const tx = new Transaction();
 
-        // Split coin for Price + Royalty?
-        // For simplicity in this demo, we assume user sends a coin covering all.
-        // In prod, would calculate royalty and add to price.
-        // Let's assume priceMist is the LIST PRICE. 
-        // We need to fetch policy to know royalty? 
-        // For now, let's assume we pay exactly what's asked + a buffer if needed, 
-        // BUT the contract splits the payment.
-        // CRITICAL: The contract expects `payment` >= price + royalty.
+        const priceNum = typeof priceMist === 'string' ? parseInt(priceMist) : priceMist;
+        const [payment] = tx.splitCoins(tx.gas, [tx.pure.u64(priceNum)]);
 
-        // FIXME: Hardcoded 5% royalty buffer for now as example? 
-        // Or just require user to pass totalAmount.
-        // Let's pass the coin with value.
-        const [payment] = tx.splitCoins(tx.gas, [tx.pure.u64(priceMist)]);
-
-        tx.moveCall({
-            target: `${MARKETPLACE_PACKAGE_ID}::market::purchase`,
+        // Use direct kiosk purchase (no transfer policy for fungible items like Coin)
+        // For NFTs with transfer policy, you would use the marketplace wrapper
+        const [item, request] = tx.moveCall({
+            target: '0x2::kiosk::purchase',
             typeArguments: [itemType],
             arguments: [
                 tx.object(kioskId),
-                tx.pure.id(itemId), // Item ID (Pure)
-                tx.pure.u64(priceMist), // The List Price
+                tx.pure.id(itemId),
                 payment,
-                tx.object(TRANSFER_POLICY_ID), // Needed for confirmation
+            ],
+        });
+
+        // For items without transfer policy (like Coin), confirm with empty policy
+        // This returns the TransferRequest which we need to handle
+        // For simple purchases without royalty rules, we can just transfer the item
+        tx.transferObjects([item], tx.pure.address(account.address));
+
+        // Return the request to owner (it will fail if there's a policy requirement)
+        // For production, fetch and use actual policy
+        tx.moveCall({
+            target: '0x2::transfer_policy::confirm_request',
+            typeArguments: [itemType],
+            arguments: [
+                tx.object(TRANSFER_POLICY_ID),
+                request,
             ],
         });
 

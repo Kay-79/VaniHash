@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { Task, TaskStatus } from '@/types';
 import { mistToSui, formatStruct, shortenAddress } from '@/utils/formatters';
-import { AlertCircle, Copy, Cpu, Clock, ShieldCheck, User, Calendar, Coins, Hash, Box, Package } from 'lucide-react';
+import { AlertCircle, Copy, Cpu, Clock, ShieldCheck, User, Calendar, Coins, Hash, Box, Package, Download } from 'lucide-react';
 import { SubmitProofDialog } from '@/components/marketplace/SubmitProofDialog';
 import { TaskStatusBadge } from '@/components/marketplace/TaskStatusBadge';
 import { shouldBeActive, isInGracePeriod, formatTimeRemaining, getGracePeriodRemaining } from '@/utils/gracePeriod';
@@ -16,6 +16,7 @@ import { useCancelTask } from '@/hooks/useCancelTask';
 import { Button } from '@/components/ui/Button';
 import { toast } from 'sonner';
 import { getTaskIcon, getTaskLabel } from '@/utils/taskType';
+import { NETWORK } from '@/constants/chain';
 
 export default function TaskDetailPage() {
     const params = useParams();
@@ -180,7 +181,7 @@ export default function TaskDetailPage() {
                                         {task.prefix && (
                                             <div className="text-center">
                                                 <span className="text-xs text-gray-500 uppercase tracking-widest mb-1 block">Starts With</span>
-                                                <span className="text-3xl md:text-5xl font-mono font-bold text-white tracking-widest break-all drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
+                                                <span className="text-xl md:text-2xl font-mono font-bold text-white tracking-wider break-all drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
                                                     0x<span className="text-cyan-400">{task.prefix}</span>...
                                                 </span>
                                             </div>
@@ -188,7 +189,7 @@ export default function TaskDetailPage() {
                                         {task.contains && (
                                             <div className="text-center">
                                                 <span className="text-xs text-gray-500 uppercase tracking-widest mb-1 block">Contains</span>
-                                                <span className="text-3xl md:text-5xl font-mono font-bold text-white tracking-widest break-all">
+                                                <span className="text-xl md:text-2xl font-mono font-bold text-white tracking-wider break-all">
                                                     ...<span className="text-purple-400">{task.contains}</span>...
                                                 </span>
                                             </div>
@@ -196,14 +197,14 @@ export default function TaskDetailPage() {
                                         {task.suffix && (
                                             <div className="text-center">
                                                 <span className="text-xs text-gray-500 uppercase tracking-widest mb-1 block">Ends With</span>
-                                                <span className="text-3xl md:text-5xl font-mono font-bold text-white tracking-widest break-all drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
+                                                <span className="text-xl md:text-2xl font-mono font-bold text-white tracking-wider break-all drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]">
                                                     ...<span className="text-cyan-400">{task.suffix}</span>
                                                 </span>
                                             </div>
                                         )}
 
                                         {!task.prefix && !task.contains && !task.suffix && task.pattern && (
-                                            <span className="text-4xl font-mono font-bold text-white break-all">
+                                            <span className="text-xl md:text-2xl font-mono font-bold text-white break-all">
                                                 {task.pattern}
                                             </span>
                                         )}
@@ -239,6 +240,33 @@ export default function TaskDetailPage() {
                                             </div>
                                         </div>
                                     </div>
+
+                                    {/* Bytecode Download for Package Tasks */}
+                                    {task.task_type === 1 && task.bytecode && (
+                                        <Button
+                                            variant="secondary"
+                                            className="flex-1 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 py-3"
+                                            onClick={() => {
+                                                const byteCharacters = atob(task.bytecode!);
+                                                const byteNumbers = new Array(byteCharacters.length);
+                                                for (let i = 0; i < byteCharacters.length; i++) {
+                                                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                                                }
+                                                const byteArray = new Uint8Array(byteNumbers);
+                                                const blob = new Blob([byteArray], { type: 'application/octet-stream' });
+                                                const url = URL.createObjectURL(blob);
+                                                const a = document.createElement('a');
+                                                a.href = url;
+                                                a.download = `package_${shortenAddress(task.task_id)}.mv`;
+                                                a.click();
+                                                URL.revokeObjectURL(url);
+                                                toast.success('Bytecode downloaded!');
+                                            }}
+                                        >
+                                            <Download className="h-4 w-4 mr-2" />
+                                            Download Bytecode (.mv)
+                                        </Button>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>
@@ -327,6 +355,27 @@ export default function TaskDetailPage() {
                                             </p>
                                         </div>
                                     </div>
+                                )}
+
+                                {/* Transaction Link for Completed Tasks */}
+                                {isCompleted && task.tx_digest && (
+                                    <a
+                                        href={`https://suiscan.xyz/${NETWORK}/tx/${task.tx_digest}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-3 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 transition-colors group"
+                                    >
+                                        <div className="p-2 rounded bg-blue-500/20 text-blue-400">
+                                            <Hash className="h-4 w-4" />
+                                        </div>
+                                        <div className="overflow-hidden flex-1">
+                                            <p className="text-xs text-gray-500 uppercase">Transaction</p>
+                                            <p className="text-sm font-mono text-blue-400 group-hover:text-blue-300 truncate">
+                                                {shortenAddress(task.tx_digest)}
+                                            </p>
+                                        </div>
+                                        <Copy className="h-4 w-4 text-gray-500 group-hover:text-white" />
+                                    </a>
                                 )}
 
                                 <div className="flex items-center gap-3">

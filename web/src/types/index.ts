@@ -37,11 +37,13 @@ export interface Task {
     completer?: string;
     miner?: string; // Alias for completer
     created_at?: string;
+    tx_digest?: string; // Transaction digest for completed tasks
 
     // Blockchain Identifiers
     gas_object?: string;
     package_id?: string;
     nft_id?: string;
+    bytecode?: string; // Base64 encoded bytecode for package tasks
 
     // Attributes for filtering
     attributes?: {

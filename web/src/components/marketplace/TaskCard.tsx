@@ -3,12 +3,13 @@ import { Card, CardContent, CardFooter } from '@/components/ui/Card';
 import { mistToSui } from '@/utils/formatters';
 import { Badge } from '@/components/ui/Badge';
 import { SubmitProofDialog } from './SubmitProofDialog';
-import { Clock, ShieldCheck, Target } from 'lucide-react';
+import { Clock, ShieldCheck, Target, ExternalLink } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { isInGracePeriod, getGracePeriodRemaining } from '@/utils/gracePeriod';
 
-import { getTaskLabel } from '@/utils/taskType';
+import { getTaskIcon, getTaskLabel } from '@/utils/taskType';
+import { NETWORK } from '@/constants/chain';
 
 interface TaskCardProps {
     task: Task;
@@ -119,74 +120,67 @@ export function TaskCard({ task }: TaskCardProps) {
     };
 
     return (
-        <Link href={`/task/${task.task_id}`} className="block h-full w-full">
-            <Card className="h-full flex flex-col bg-gray-900 border-gray-800 hover:border-yellow-500/50 transition-all duration-300 group overflow-hidden relative cursor-pointer">
-                {/* Status Badge */}
-                <div className="absolute top-2 right-2 z-10">
+        <Link href={`/task/${task.task_id}`} className="block w-full">
+            <div className="flex items-center gap-4 p-3 bg-gray-900 border border-gray-800 rounded-lg hover:border-cyan-500/30 hover:bg-gray-900/80 transition-all duration-200 cursor-pointer group">
+                {/* Type Icon */}
+                {getTaskIcon({ taskType: task.task_type, targetType: task.target_type, className: "h-5 w-5" })}
+
+                {/* Pattern */}
+                <div className="flex-1 min-w-0">
+                    <span className="font-mono text-sm font-bold text-white truncate block">
+                        {renderPattern()}
+                    </span>
+                    <span className="text-[11px] text-gray-500">{getTaskLabel(task.task_type, task.target_type)}</span>
+                </div>
+
+                {/* Reward */}
+                <div className="text-right shrink-0">
+                    <p className="text-sm font-bold text-white">
+                        {task.reward_amount ? mistToSui(task.reward_amount) : '0'}
+                        <span className="text-[10px] text-yellow-500 ml-1">SUI</span>
+                    </p>
+                </div>
+
+                {/* Status + Time */}
+                <div className="flex flex-col items-center shrink-0 min-w-[80px]">
                     <Badge variant={isAvailable ? "default" : "secondary"} className={
                         isActive
-                            ? "bg-green-500/10 text-green-400 border-green-500/20 text-[10px] px-2 py-0"
+                            ? "bg-green-500/10 text-green-400 border-green-500/20 text-[10px] px-2 py-0.5"
                             : isPending
-                                ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20 text-[10px] px-2 py-0"
+                                ? "bg-yellow-500/10 text-yellow-400 border-yellow-500/20 text-[10px] px-2 py-0.5"
                                 : isCompleted
-                                    ? "bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px] px-2 py-0"
-                                    : "bg-gray-800 text-gray-400 text-[10px] px-2 py-0"
+                                    ? "bg-blue-500/10 text-blue-400 border-blue-500/20 text-[10px] px-2 py-0.5"
+                                    : "bg-gray-800 text-gray-400 text-[10px] px-2 py-0.5"
                     }>
                         {getStatusLabel()}
                     </Badge>
-                </div>
-
-                <CardContent className="p-0 flex-1 flex flex-col">
-                    {/* Pattern Visual */}
-                    <div className="h-24 bg-gradient-to-br from-gray-800 to-gray-900 flex items-center justify-center relative group-hover:from-gray-800 group-hover:to-gray-800/80 transition-all">
-                        <div className="text-center z-10 flex flex-col items-center">
-                            <div className="h-8 w-8 bg-black/50 rounded-lg flex items-center justify-center mb-1 border border-gray-700 shadow-lg">
-                                <Target className="h-4 w-4 text-yellow-500" />
-                            </div>
-                            <span className="font-mono text-base font-bold text-white tracking-wider truncate max-w-[180px]">
-                                {renderPattern()}
-                            </span>
-                        </div>
-                        {/* Background Grid Effect */}
-                        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-10" />
-                    </div>
-
-                    {/* Details */}
-                    <div className="p-3 space-y-2 flex-1">
-                        <div className="flex justify-between items-center bg-gray-900/50 p-2 rounded-lg border border-gray-800">
-                            <div className="flex items-center gap-2">
-                                <div className="p-1 rounded bg-gray-800 text-gray-400">
-                                    <ShieldCheck className="h-3.5 w-3.5" />
-                                </div>
-                                <span className="text-xs text-gray-300 font-medium">{getTaskLabel(task.task_type, task.target_type)}</span>
-                            </div>
-                            <div className="text-right">
-                                <p className="text-sm font-bold text-white flex items-center gap-1">
-                                    {task.reward_amount ? mistToSui(task.reward_amount) : '0'}
-                                    <span className="text-[10px] text-yellow-500 font-normal uppercase">SUI</span>
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </CardContent>
-
-                <CardFooter className="p-3 pt-0 flex items-center justify-between mt-auto">
-                    <div className="flex items-center gap-1.5 text-[10px] text-gray-500 font-medium uppercase tracking-wide">
-                        <Clock className="h-3 w-3" />
+                    <div className="flex items-center gap-1 text-[10px] text-gray-500 mt-1">
+                        <Clock className="h-2.5 w-2.5" />
                         <span>{timeLeft}</span>
                     </div>
+                </div>
 
-                    {isAvailable ? (
-                        <div onClick={(e) => e.stopPropagation()} className="scale-90 origin-right">
-                            <SubmitProofDialog taskId={task.task_id} />
-                        </div>
-                    ) : isPending ? (
-                        <span className="text-[10px] text-yellow-500 italic">Starting soon</span>
-                    ) : (
-                        <span className="text-[10px] text-gray-600 italic">Task ended</span>
-                    )}
-                </CardFooter>
-            </Card>
+                {/* Action */}
+                {isAvailable && (
+                    <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                        <SubmitProofDialog taskId={task.task_id} />
+                    </div>
+                )}
+
+                {/* View on-chain for completed tasks */}
+                {isCompleted && task.tx_digest && (
+                    <a
+                        href={`https://suiscan.xyz/${NETWORK}/tx/${task.tx_digest}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center gap-1 text-[10px] text-blue-400 hover:text-blue-300 shrink-0"
+                    >
+                        <ExternalLink className="h-3 w-3" />
+                        View TX
+                    </a>
+                )}
+            </div>
         </Link>
     );
 }

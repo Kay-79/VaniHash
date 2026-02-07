@@ -7,10 +7,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { mistToSui } from '@/utils/formatters';
-import { ShoppingCart, User, Tag, Clock } from 'lucide-react';
+import { ShoppingCart, User, Tag, Clock, Coins } from 'lucide-react';
 import { useMarketplace } from '@/hooks/useMarketplace';
 import { useOwnedKiosk } from '@/hooks/useOwnedKiosk';
-import { useCurrentAccount } from '@mysten/dapp-kit';
+import { useCurrentAccount, useSuiClient } from '@mysten/dapp-kit';
 import { normalizeSuiAddress } from '@mysten/sui/utils';
 import { toast } from 'sonner';
 
@@ -34,6 +34,8 @@ export default function ItemDetailPage() {
     const { buy, delist, isPending } = useMarketplace();
     const { kioskId, kioskCapId } = useOwnedKiosk();
     const account = useCurrentAccount();
+    const suiClient = useSuiClient();
+    const [coinBalance, setCoinBalance] = useState<string | null>(null);
 
     useEffect(() => {
         if (!id) return;
@@ -51,6 +53,29 @@ export default function ItemDetailPage() {
         };
         fetchListing();
     }, [id]);
+
+    // Fetch coin balance if it's a SUI coin
+    useEffect(() => {
+        if (!listing || !listing.type?.includes('0x2::sui::SUI')) return;
+
+        const fetchCoinBalance = async () => {
+            try {
+                const object = await suiClient.getObject({
+                    id: listing.listing_id,
+                    options: { showContent: true },
+                });
+                if (object.data?.content?.dataType === 'moveObject') {
+                    const fields = object.data.content.fields as any;
+                    if (fields?.balance) {
+                        setCoinBalance(fields.balance);
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to fetch coin balance:', err);
+            }
+        };
+        fetchCoinBalance();
+    }, [listing, suiClient]);
 
     const handleBuy = () => {
         if (!listing || !listing.kiosk_id) {
@@ -114,39 +139,52 @@ export default function ItemDetailPage() {
 
     return (
         <DashboardLayout activityMode="market">
-            <div className="max-w-6xl mx-auto p-6 space-y-8">
-                {/* Header / Breadcrumb-ish */}
-                <div className="flex flex-col gap-2">
-                    <Button variant="ghost" className="pl-0 w-fit hover:bg-transparent text-gray-500 hover:text-white" onClick={() => window.history.back()}>
-                        &larr; Back to Market
+            <div className="max-w-6xl mx-auto p-6 space-y-6">
+                {/* Header */}
+                <div className="flex items-center justify-between">
+                    <Button variant="ghost" className="pl-0 hover:bg-transparent text-gray-500 hover:text-white" onClick={() => window.history.back()}>
+                        &larr; Back
                     </Button>
-                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                        <h1 className="text-2xl md:text-3xl font-bold font-mono text-yellow-500 tracking-tight break-all">
-                            {listing?.listing_id}
-                        </h1>
-                        <Badge variant="outline" className="w-fit text-sm border-gray-700 text-gray-400">
-                            Type: {listing?.type.split('<')[1]?.replace('>', '').split('::').pop() || 'Unknown'}
-                        </Badge>
-                    </div>
+                    <Badge variant="outline" className="text-sm border-gray-700 text-gray-400">
+                        {listing?.type.split('<')[1]?.replace(/>/g, '').split('::').pop() || 'Unknown'}
+                    </Badge>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     {/* Visual / Main Image - Left Side (5 cols) */}
                     <div className="lg:col-span-5">
-                        <Card className="bg-black/40 border-gray-800 overflow-hidden aspect-square flex items-center justify-center relative group">
+                        <Card className="bg-gray-900/30 border-gray-800 overflow-hidden aspect-square flex items-center justify-center relative group">
                             {listing?.image_url ? (
                                 <img
                                     src={listing.image_url}
                                     alt="NFT"
                                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                                 />
+                            ) : listing?.type?.includes('0x2::sui::SUI') ? (
+                                <div className="flex flex-col items-center gap-3">
+                                    <img src="https://docs.sui.io/img/logo.svg" alt="SUI" className="w-24 h-24" />
+                                    <span className="text-gray-400 font-medium text-lg">SUI Coin</span>
+                                    {coinBalance && (
+                                        <div className="flex items-center gap-2 mt-2 px-4 py-2 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                                            <Coins className="h-5 w-5 text-blue-400" />
+                                            <span className="text-xl font-bold text-white">{mistToSui(coinBalance)}</span>
+                                            <span className="text-blue-400 font-medium">SUI</span>
+                                        </div>
+                                    )}
+                                </div>
                             ) : (
                                 <div className="text-center">
-                                    <Tag className="h-24 w-24 text-gray-700 mx-auto mb-4" />
-                                    <span className="text-gray-600 font-mono">No Preview</span>
+                                    <Tag className="h-20 w-20 text-gray-700 mx-auto mb-3" />
+                                    <span className="text-gray-600 font-mono text-sm">No Preview</span>
                                 </div>
                             )}
                         </Card>
+
+                        {/* Object ID below image */}
+                        <div className="mt-4 p-4 bg-gray-900/50 rounded-lg border border-gray-800">
+                            <p className="text-xs text-gray-500 uppercase mb-1">Object ID</p>
+                            <p className="font-mono text-sm text-yellow-500 break-all select-all">{listing?.listing_id}</p>
+                        </div>
                     </div>
 
                     {/* Details - Right Side (7 cols) */}
@@ -219,7 +257,7 @@ export default function ItemDetailPage() {
                             </CardHeader>
                             <CardContent>
                                 <div className="flex flex-wrap gap-2">
-                                    <Badge variant="secondary" className="bg-gray-800 text-gray-300 hover:bg-gray-700">Type: {listing.type.split('::').pop()?.replace('>', '')}</Badge>
+                                    <Badge variant="secondary" className="bg-gray-800 text-gray-300 hover:bg-gray-700">Type: {listing.type.split('::').pop()?.replace(/>/g, '')}</Badge>
                                     <Badge variant="secondary" className="bg-gray-800 text-gray-300 hover:bg-gray-700">Status: {listing.status}</Badge>
                                 </div>
                             </CardContent>
