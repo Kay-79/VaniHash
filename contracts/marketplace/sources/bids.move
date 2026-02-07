@@ -1,12 +1,12 @@
 module marketplace::bids;
 
-use marketplace::royalty_rule;
+use marketplace::config::{Self, MarketplaceConfig};
 use sui::balance::{Self, Balance};
 use sui::coin::{Self, Coin};
 use sui::event;
 use sui::kiosk::{Self, Kiosk, KioskOwnerCap};
 use sui::sui::SUI;
-use sui::transfer_policy::{Self, TransferPolicy};
+use sui::transfer_policy::{TransferPolicy, TransferRequest};
 
 /// Error codes
 const EPolicyMismatch: u64 = 1;
@@ -30,7 +30,14 @@ public struct BidCreated has copy, drop {
 public struct BidAccepted has copy, drop {
     bid_id: ID,
     item_id: ID,
-    u_addr: address, // seller
+    seller: address,
+    bidder: address,
+    amount: u64,
+}
+
+public struct BidCancelled has copy, drop {
+    bid_id: ID,
+    bidder: address,
     amount: u64,
 }
 
@@ -38,7 +45,7 @@ public struct BidAccepted has copy, drop {
 public fun create_bid<T>(payment: Coin<SUI>, policy: &TransferPolicy<T>, ctx: &mut TxContext) {
     let amount = coin::value(&payment);
     let bidder = ctx.sender();
-    let policy_id = object::id(policy); // We rely on Policy ID to identify collection
+    let policy_id = object::id(policy);
 
     let bid = Bid {
         id: object::new(ctx),
@@ -59,56 +66,99 @@ public fun create_bid<T>(payment: Coin<SUI>, policy: &TransferPolicy<T>, ctx: &m
     });
 }
 
-/// Accept a Bid.
-/// Callable by Kiosk Owner (Seller/Miner).
-/// Atomic: Take Item -> Calculate Net -> Pay Royalty -> Pay Seller -> Transfer Item to Bidder.
+/// Cancel a bid and reclaim funds
+/// Only the original bidder can cancel
+public fun cancel_bid(bid: Bid, ctx: &mut TxContext) {
+    let Bid { id, bidder, amount, policy_id: _ } = bid;
+    let bid_id = object::uid_to_inner(&id);
+    let amount_val = balance::value(&amount);
+
+    object::delete(id);
+
+    let refund = coin::from_balance(amount, ctx);
+    transfer::public_transfer(refund, bidder);
+
+    event::emit(BidCancelled {
+        bid_id,
+        bidder,
+        amount: amount_val,
+    });
+}
+
+/// Accept a Bid - returns TransferRequest for PTB to satisfy policy rules
+///
+/// Flow:
+/// 1. Validates bid matches policy
+/// 2. Lists item at bid price, then purchases (generates proper TransferRequest)
+/// 3. Collects marketplace fee from proceeds
+/// 4. Returns (Item, TransferRequest, bidder address)
+///
+/// Caller PTB must:
+/// 1. Satisfy all TransferPolicy rules (royalty, floor price, etc.)
+/// 2. Call transfer_policy::confirm_request
+/// 3. Transfer the item to bidder (address returned)
+/// 4. Seller withdraws proceeds from kiosk
 public fun accept_bid<T: key + store>(
     bid: Bid,
     kiosk: &mut Kiosk,
     cap: &KioskOwnerCap,
     item_id: ID,
-    policy: &mut TransferPolicy<T>,
+    policy: &TransferPolicy<T>,
+    marketplace_config: &MarketplaceConfig,
     ctx: &mut TxContext,
-) {
-    // 1. Remove Bid
+): (T, TransferRequest<T>, address) {
+    // 1. Destructure and validate bid
     let Bid { id, bidder, mut amount, policy_id } = bid;
     let bid_id = object::uid_to_inner(&id);
     object::delete(id);
 
     assert!(policy_id == object::id(policy), EPolicyMismatch);
 
-    // 2. Take Item from Kiosk
-    // This returns the Item.
-    // Note: Kiosk Take does NO payment checks. Listing price is ignored.
-    // The "deal" is implied by the Bid.
-    // We manually generate a TransferRequest to satisfy policy.
-    let item = kiosk::take<T>(kiosk, cap, item_id);
-    let total_bid_val = balance::value(&amount);
+    let bid_value = balance::value(&amount);
 
-    let mut request = transfer_policy::new_request(item_id, total_bid_val, object::id(kiosk));
-    let royalty_val = royalty_rule::fee_amount(policy, total_bid_val);
+    // 2. Calculate and collect marketplace fee from bid amount
+    let marketplace_fee = config::calculate_fee(marketplace_config, bid_value);
+    if (marketplace_fee > 0) {
+        let fee_balance = balance::split(&mut amount, marketplace_fee);
+        let fee_coin = coin::from_balance(fee_balance, ctx);
+        transfer::public_transfer(fee_coin, config::beneficiary(marketplace_config));
+    };
 
-    // Take royalty from balance
-    let royalty_bal = balance::split(&mut amount, royalty_val);
-    let royalty_coin = coin::from_balance(royalty_bal, ctx);
+    // 3. List item at remaining bid value (after fee deduction)
+    let purchase_price = balance::value(&amount);
+    kiosk::list<T>(kiosk, cap, item_id, purchase_price);
 
-    // 4. Pay Royalty & Confirm
-    // `royalty_rule::pay` requires Coin.
-    royalty_rule::pay(policy, &mut request, royalty_coin);
-    transfer_policy::confirm_request(policy, request);
+    // 4. Convert bid balance to coin for purchase
+    let payment = coin::from_balance(amount, ctx);
 
-    // 5. Pay Seller (Miner)
-    // The remaining `amount` is the Net profit.
-    let seller_pay = coin::from_balance(amount, ctx);
-    transfer::public_transfer(seller_pay, ctx.sender());
+    // 5. Purchase from kiosk - generates proper TransferRequest
+    let (item, request) = kiosk::purchase<T>(kiosk, item_id, payment);
 
-    // 6. Transfer Item to Bidder
-    transfer::public_transfer(item, bidder);
-
+    // 6. Emit event
     event::emit(BidAccepted {
         bid_id,
         item_id,
-        u_addr: ctx.sender(),
-        amount: total_bid_val,
+        seller: ctx.sender(),
+        bidder,
+        amount: bid_value,
     });
+
+    // 7. Return item + request for PTB, plus bidder address for transfer
+    // Seller proceeds are now in kiosk, can withdraw via kiosk::withdraw
+    (item, request, bidder)
+}
+
+/// Get bid bidder address
+public fun bid_bidder(bid: &Bid): address {
+    bid.bidder
+}
+
+/// Get bid amount
+public fun bid_amount(bid: &Bid): u64 {
+    balance::value(&bid.amount)
+}
+
+/// Get bid policy ID
+public fun bid_policy_id(bid: &Bid): ID {
+    bid.policy_id
 }

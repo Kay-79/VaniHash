@@ -115,7 +115,12 @@ export function ListingModal({ itemId, itemType }: ListingModalProps) {
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline" size="sm">List for Sale</Button>
+                <Button
+                    className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold shadow-md hover:shadow-lg hover:shadow-cyan-500/25 transition-all duration-200 border-0"
+                    size="sm"
+                >
+                    List for Sale
+                </Button>
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>

@@ -8,12 +8,13 @@ export const CONFIG = {
 
     // Core Packages
     VANIHASH_PACKAGE_ID: '0x0e9eeb64deb8b10b20de2b93b083b2a90f4e38004debdfe3b2f39384c8b08a74',
-    MARKETPLACE_PACKAGE_ID: '0x782da4a3113f28bc9be9ff86ea766d08827eb3855d0069b5d86d2c4494b78e5d', // Deployed on Testnet
+    MARKETPLACE_PACKAGE_ID: '0x3cf0ec9e9c6850ff18178b455faa93e104bdfae0b3cbe8e1f5b6e38d1f099620', // New version with TransferPolicy support
 
     // Module Names
     MODULE_VANIHASH: 'vanihash',
     MODULE_MARKET: 'market',
     MODULE_BIDS: 'bids',
+    MODULE_CONFIG: 'config',
 
     // Indexer Settings
     POLL_INTERVAL_MS: 30000,

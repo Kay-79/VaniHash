@@ -1,6 +1,6 @@
 import { useSignAndExecuteTransaction, useCurrentAccount } from '@mysten/dapp-kit';
 import { Transaction } from '@mysten/sui/transactions';
-import { MARKETPLACE_PACKAGE_ID, TRANSFER_POLICY_ID } from '@/constants/chain';
+import { MARKETPLACE_PACKAGE_ID, MARKETPLACE_CONFIG_ID, TRANSFER_POLICY_ID } from '@/constants/chain';
 
 export function useMarketplace() {
     const account = useCurrentAccount();
@@ -45,11 +45,23 @@ export function useMarketplace() {
         signAndExecute({ transaction: tx }, { onSuccess, onError });
     };
 
+    /**
+     * Buy an item from a kiosk using the new TransferPolicy-aware purchase function.
+     * 
+     * The new contract returns (Item, TransferRequest) which the PTB must handle:
+     * 1. Satisfy all policy rules (royalty, floor price, etc.)
+     * 2. Call confirm_request
+     * 3. Transfer item to buyer
+     * 
+     * NOTE: This implementation handles the common royalty rule case.
+     * For collections with other rules, use purchaseWithPolicy.ts for full dynamic handling.
+     */
     const buy = (
         kioskId: string,
         itemId: string,
         itemType: string,
         priceMist: string | number,
+        royaltyBp: number = 0, // Royalty in basis points (500 = 5%)
         onSuccess?: (result: any) => void,
         onError?: (error: any) => void
     ) => {
@@ -57,35 +69,55 @@ export function useMarketplace() {
         const tx = new Transaction();
 
         const priceNum = typeof priceMist === 'string' ? parseInt(priceMist) : priceMist;
-        const [payment] = tx.splitCoins(tx.gas, [tx.pure.u64(priceNum)]);
 
-        // Use direct kiosk purchase (no transfer policy for fungible items like Coin)
-        // For NFTs with transfer policy, you would use the marketplace wrapper
-        const [item, request] = tx.moveCall({
-            target: '0x2::kiosk::purchase',
+        // Calculate payments: price + 2% marketplace fee + royalty
+        const marketplaceFee = Math.floor(priceNum * 2 / 100);
+        const royaltyAmount = Math.floor(priceNum * royaltyBp / 10000);
+        const totalPayment = priceNum + marketplaceFee + royaltyAmount;
+
+        const [payment] = tx.splitCoins(tx.gas, [tx.pure.u64(totalPayment)]);
+
+        // Call marketplace::market::purchase
+        // Returns: (item: T, request: TransferRequest<T>)
+        const [item, transferRequest] = tx.moveCall({
+            target: `${MARKETPLACE_PACKAGE_ID}::market::purchase`,
             typeArguments: [itemType],
             arguments: [
                 tx.object(kioskId),
                 tx.pure.id(itemId),
+                tx.pure.u64(priceNum),
                 payment,
+                tx.object(TRANSFER_POLICY_ID),
+                tx.object(MARKETPLACE_CONFIG_ID),
             ],
         });
 
-        // For items without transfer policy (like Coin), confirm with empty policy
-        // This returns the TransferRequest which we need to handle
-        // For simple purchases without royalty rules, we can just transfer the item
-        tx.transferObjects([item], tx.pure.address(account.address));
+        // If royalty exists, pay it
+        if (royaltyBp > 0) {
+            const [royaltyPayment] = tx.splitCoins(tx.gas, [tx.pure.u64(royaltyAmount)]);
+            tx.moveCall({
+                target: `${MARKETPLACE_PACKAGE_ID}::royalty_rule::pay`,
+                typeArguments: [itemType],
+                arguments: [
+                    tx.object(TRANSFER_POLICY_ID),
+                    transferRequest,
+                    royaltyPayment,
+                ],
+            });
+        }
 
-        // Return the request to owner (it will fail if there's a policy requirement)
-        // For production, fetch and use actual policy
+        // Confirm the transfer request (consume hot potato)
         tx.moveCall({
             target: '0x2::transfer_policy::confirm_request',
             typeArguments: [itemType],
             arguments: [
                 tx.object(TRANSFER_POLICY_ID),
-                request,
+                transferRequest,
             ],
         });
+
+        // Transfer item to buyer
+        tx.transferObjects([item], tx.pure.address(account.address));
 
         signAndExecute({ transaction: tx }, { onSuccess, onError });
     };

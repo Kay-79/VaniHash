@@ -45,12 +45,13 @@ export function ListingCard({ listing, onBuySuccess }: ListingCardProps) {
         }
         const itemType = match[1];
 
-        // The buy function expects: (kioskId, itemId, itemType, priceMist, onSuccess, onError)
+        // The buy function expects: (kioskId, itemId, itemType, priceMist, royaltyBp, onSuccess, onError)
         buy(
             listing.seller,      // kioskId (seller's kiosk)
             listing.listing_id,  // itemId
             itemType,            // itemType
             listing.price,       // priceMist
+            0,                   // royaltyBp (0 = no royalty rule)
             () => {
                 toast.success("Item bought successfully!");
                 if (onBuySuccess) onBuySuccess();

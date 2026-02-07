@@ -6,7 +6,7 @@ import { ListingTable } from '@/components/marketplace/ListingTable';
 import { ListingModal } from '@/components/marketplace/ListingModal';
 import { useFetchListings } from '@/hooks/useFetchListings';
 import { MarketplaceStats } from '@/components/marketplace/MarketplaceStats';
-import { LayoutGrid, List, Search, Filter } from 'lucide-react';
+import { LayoutGrid, List } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useCurrentAccount } from '@mysten/dapp-kit';
@@ -33,17 +33,6 @@ function MarketContent() {
                     </h2>
 
                     <div className="flex items-center gap-3">
-                        {/* Search (Local filter for now or wire to URL) */}
-                        <div className="relative">
-                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-                            <Input
-                                placeholder="Filter items..."
-                                className="pl-9 w-64 bg-gray-900 border-gray-800"
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                            />
-                        </div>
-
                         <ListingModal />
 
                         <button

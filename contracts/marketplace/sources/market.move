@@ -1,62 +1,67 @@
 module marketplace::market;
 
-use marketplace::royalty_rule;
+use marketplace::config::{Self, MarketplaceConfig};
 use sui::coin::{Self, Coin};
 use sui::kiosk::{Self, Kiosk, KioskOwnerCap};
 use sui::sui::SUI;
-use sui::transfer_policy::{Self, TransferPolicy};
+use sui::transfer_policy::{TransferPolicy, TransferRequest};
 
 /// Error codes
 const EInsufficientPayment: u64 = 1;
 
-// Wrapper for kiosk::list
+/// Wrapper for kiosk::list
 public fun list<T: key + store>(kiosk: &mut Kiosk, cap: &KioskOwnerCap, item_id: ID, price: u64) {
     kiosk::list<T>(kiosk, cap, item_id, price);
 }
 
-// Wrapper for kiosk::delist
+/// Wrapper for kiosk::delist
 public fun delist<T: key + store>(kiosk: &mut Kiosk, cap: &KioskOwnerCap, item_id: ID) {
     kiosk::delist<T>(kiosk, cap, item_id);
 }
 
-// Atomic Purchase function
-// 1. Splits payment for Seller (Asset Price)
-// 2. Splits payment for Royalty (Policy Rule)
-// 3. Completes Kiosk Purchase
-// 4. Pays Royalty and Confirms Request
-// 5. Returns Item to Buyer
-// 6. Refunds remaining gas/coin to Buyer
+/// Purchase function that returns TransferRequest for PTB to satisfy policy rules
+///
+/// Flow:
+/// 1. Collects marketplace fee (2%) from payment
+/// 2. Performs kiosk::purchase with remaining payment
+/// 3. Returns (Item, TransferRequest) for caller to satisfy policy rules
+/// 4. Refunds any excess to buyer
+///
+/// Caller PTB must:
+/// 1. Satisfy all TransferPolicy rules (royalty, floor price, etc.)
+/// 2. Call transfer_policy::confirm_request
+/// 3. Transfer the item to buyer
+#[allow(lint(self_transfer))]
 public fun purchase<T: key + store>(
     kiosk: &mut Kiosk,
     item_id: ID,
     price: u64,
     mut payment: Coin<SUI>,
-    policy: &mut TransferPolicy<T>,
+    _policy: &TransferPolicy<T>,
+    marketplace_config: &MarketplaceConfig,
     ctx: &mut TxContext,
-): T {
-    // Check coverage
-    let royalty_amount = royalty_rule::fee_amount(policy, price);
-
-    let total_required = price + royalty_amount;
+): (T, TransferRequest<T>) {
+    // Calculate total required: price + marketplace fee
+    let marketplace_fee = config::calculate_fee(marketplace_config, price);
+    let total_required = price + marketplace_fee;
     assert!(coin::value(&payment) >= total_required, EInsufficientPayment);
 
-    // Split components
+    // Collect marketplace fee
+    config::collect_fee(marketplace_config, &mut payment, price, ctx);
+
+    // Split exact price for kiosk purchase
     let kiosk_payment = coin::split(&mut payment, price, ctx);
-    let royalty_payment = coin::split(&mut payment, royalty_amount, ctx);
 
-    // Kiosk Purchase
-    // This returns the Item and the "Hot Potato" TransferRequest
-    let (item, mut request) = kiosk::purchase(kiosk, item_id, kiosk_payment);
+    // Perform kiosk purchase - returns item + TransferRequest hot potato
+    let (item, request) = kiosk::purchase(kiosk, item_id, kiosk_payment);
 
-    // Satisfy Royalty Rule
-    royalty_rule::pay(policy, &mut request, royalty_payment);
+    // Refund any remainder to buyer
+    if (coin::value(&payment) > 0) {
+        transfer::public_transfer(payment, ctx.sender());
+    } else {
+        coin::destroy_zero(payment);
+    };
 
-    // Confirm Request (Consume Hot Potato)
-    // If other rules exist, this will fail. We assume only Royalty Rule for this demo.
-    transfer_policy::confirm_request(policy, request);
-
-    // Refund remainder
-    transfer::public_transfer(payment, ctx.sender());
-
-    item
+    // Return item + request for PTB to satisfy policy rules
+    (item, request)
 }
