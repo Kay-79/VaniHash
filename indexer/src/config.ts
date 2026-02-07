@@ -8,7 +8,7 @@ export const CONFIG = {
 
     // Core Packages
     VANIHASH_PACKAGE_ID: '0x0e9eeb64deb8b10b20de2b93b083b2a90f4e38004debdfe3b2f39384c8b08a74',
-    MARKETPLACE_PACKAGE_ID: '0x3cf0ec9e9c6850ff18178b455faa93e104bdfae0b3cbe8e1f5b6e38d1f099620', // New version with TransferPolicy support
+    MARKETPLACE_PACKAGE_ID: '0x5964616dbc4b9576f8ce622d939a2f6e0c3b01b9b583cbee98ca4a59766ec22d', // v4 simplified escrow only
 
     // Module Names
     MODULE_VANIHASH: 'vanihash',

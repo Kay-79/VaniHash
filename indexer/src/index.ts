@@ -55,40 +55,33 @@ async function main() {
             // IMPORTANT: If we query different packages, we CANNOT use the same cursor object, as the cursor is tied to the result set of the specific query.
             // We need a separate cursor for Marketplace.
 
-            // 2. Poll Marketplace Transactions (Filtered by Module Interaction)
-            // 2. Poll Marketplace Transactions (Filtered by Function Name)
-            // Due to RPC strictness, we must poll each function separately if using cursors
+            // 2. Poll Marketplace Events
             if (CONFIG.MARKETPLACE_PACKAGE_ID) {
-                const chunks = ['list', 'delist', 'purchase'];
+                const cursorKey = 'market_event_cursor';
+                const marketCursorData = await dbService.getCursor(cursorKey);
+                let marketCursor = marketCursorData
+                    ? { txDigest: marketCursorData.tx_digest!, eventSeq: marketCursorData.event_seq! }
+                    : undefined;
 
-                for (const func of chunks) {
-                    const cursorKey = `market_tx_cursor_${func}`;
-                    let marketTxCursor = await dbService.getCursor(cursorKey)
-                        .then(c => c ? c.tx_digest : undefined);
+                const marketEvents = await suiService.queryEvents(
+                    CONFIG.MARKETPLACE_PACKAGE_ID,
+                    'escrow',
+                    marketCursor
+                );
 
-                    const marketTxs = await suiService.queryTransactionBlocks(
-                        CONFIG.MARKETPLACE_PACKAGE_ID,
-                        CONFIG.MODULE_MARKET,
-                        func,
-                        marketTxCursor || undefined
-                    );
+                // Process Marketplace Events
+                for (const event of marketEvents.data) {
+                    await eventParser.parse(event);
+                }
 
-                    for (const tx of marketTxs.data) {
-                        if (tx.events) {
-                            for (const event of tx.events) {
-                                await eventParser.parse(event, tx.timestampMs);
-                            }
-                        }
-                    }
-
-                    if (marketTxs.hasNextPage && marketTxs.nextCursor) {
-                        marketTxCursor = marketTxs.nextCursor;
-                        await dbService.saveCursor(cursorKey, marketTxCursor!, '0');
-                    } else if (marketTxs.data.length > 0) {
-                        const lastTx = marketTxs.data[marketTxs.data.length - 1];
-                        marketTxCursor = lastTx.digest;
-                        await dbService.saveCursor(cursorKey, marketTxCursor!, '0');
-                    }
+                // Update Cursor
+                if (marketEvents.hasNextPage && marketEvents.nextCursor) {
+                    marketCursor = marketEvents.nextCursor;
+                    await dbService.saveCursor(cursorKey, marketCursor!.txDigest, marketCursor!.eventSeq);
+                } else if (marketEvents.data.length > 0) {
+                    const lastEvent = marketEvents.data[marketEvents.data.length - 1];
+                    marketCursor = { txDigest: lastEvent.id.txDigest, eventSeq: lastEvent.id.eventSeq };
+                    await dbService.saveCursor(cursorKey, marketCursor!.txDigest, marketCursor!.eventSeq);
                 }
             }
 

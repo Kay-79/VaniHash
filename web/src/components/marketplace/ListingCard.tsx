@@ -35,23 +35,20 @@ export function ListingCard({ listing, onBuySuccess }: ListingCardProps) {
     const handleBuy = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        // Parse type from event string "::marketplace::ItemListed<0x...>"
-        // This is a bit hacky, ideally indexer stores inner type cleanly.
-        // Format: ...ItemListed<TYPE>
+        // Parse type. Try to extract from <...> first (for backward compatibility), otherwise use as is.
         const match = listing.type.match(/<(.+)>/);
-        if (!match) {
-            toast.error("Could not determine item type");
+        const itemType = match ? match[1] : listing.type;
+
+        if (!itemType || !itemType.includes('::')) {
+            toast.error("Invalid item type: " + listing.type);
             return;
         }
-        const itemType = match[1];
 
-        // The buy function expects: (kioskId, itemId, itemType, priceMist, royaltyBp, onSuccess, onError)
+        // The buy function expects: (listingId, itemType, priceMist, onSuccess, onError)
         buy(
-            listing.seller,      // kioskId (seller's kiosk)
-            listing.listing_id,  // itemId
+            listing.listing_id,  // listingId
             itemType,            // itemType
             listing.price,       // priceMist
-            0,                   // royaltyBp (0 = no royalty rule)
             () => {
                 toast.success("Item bought successfully!");
                 if (onBuySuccess) onBuySuccess();

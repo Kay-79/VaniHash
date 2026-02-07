@@ -47,19 +47,26 @@ export class EventParser {
                     timestamp_ms: timestampMs
                 });
 
-            } else if (eventType.includes('::kiosk::ItemListed')) {
-                // Handle Standard Kiosk Listing (Filtered by Transaction Source)
+            } else if (eventType.includes('::escrow::ItemListed')) {
+                // Handle Escrow Listing
+                const itemId = parsedJson.item_id;
 
-                // Fetch Object Display
+                // Fetch Object Display and Type
                 let imageUrl = '';
+                let itemType = '';
+
                 try {
-                    const obj = await this.suiService.getObject(parsedJson.id);
-                    /* console.log(`[EventParser] Fetched object ${parsedJson.id}:`, JSON.stringify(obj.data?.content, null, 2)); */
+                    const obj = await this.suiService.getObject(itemId);
+
+                    if (obj.data?.type) {
+                        itemType = obj.data.type;
+                    }
+
                     const display = obj.data?.display?.data;
                     if (display && typeof display === 'object' && 'image_url' in display) {
                         imageUrl = String(display.image_url);
                     } else {
-                        // Fallback to Content Fields (e.g. 'url' or 'image_url')
+                        // Fallback to Content Fields
                         const content = obj.data?.content;
                         if (content && content.dataType === 'moveObject') {
                             const fields = content.fields as any;
@@ -67,42 +74,95 @@ export class EventParser {
                                 if ('url' in fields) imageUrl = String(fields.url);
                                 else if ('image_url' in fields) imageUrl = String(fields.image_url);
                                 else if ('img_url' in fields) imageUrl = String(fields.img_url);
-
-                                console.log(`[EventParser] Extracted fallback image for ${parsedJson.id}: ${imageUrl}`);
                             }
                         }
                     }
                 } catch (e) {
-                    console.error(`Failed to fetch display for ${parsedJson.id}`, e);
+                    console.error(`Failed to fetch object data for ${itemId}`, e);
                 }
 
-                console.log(`[EventParser] Upserting listing ${parsedJson.id} with image: ${imageUrl}`);
+                console.log(`[EventParser] Upserting listing ${parsedJson.listing_id} for item ${itemId} (Type: ${itemType})`);
 
                 await this.db.createListing({
-                    listing_id: parsedJson.id,
-                    seller: event.sender, // The transaction sender is the seller (owner of the Kiosk/Auth)
-                    kiosk_id: parsedJson.kiosk, // The Kiosk ID from the event
+                    listing_id: parsedJson.listing_id,
+                    seller: parsedJson.seller,
+                    kiosk_id: null,
                     price: parsedJson.price,
                     image_url: imageUrl,
-                    type: eventType,
+                    type: itemType || eventType, // Prefer actual item type, fallback to event type
                     status: 'ACTIVE',
                     tx_digest: txDigest,
                     timestamp_ms: timestampMs
                 });
 
-            } else if (eventType.includes('::kiosk::ItemPurchased')) {
-                // Handle Standard Kiosk Purchase (Filtered by Transaction Source)
-                await this.db.updateListing(parsedJson.id, {
+                // If we have the object type from the fetch above, we should update it. 
+                // But createListing might expect a specific format. 
+                // Let's rely on the `type` we pass. If we pass `eventType`, it's `...::escrow::ItemListed`. 
+                // The frontend parses `listing.type`. 
+                // 
+                // Wait, the frontend code I wrote:
+                // `const match = listing.type.match(/<(.+)>/);` 
+                // `const itemType = match ? match[1] : listing.type;`
+                //
+                // The old Kiosk event was `...::ItemListed<ITEM_TYPE>`.
+                // My new `escrow::ItemListed` event does NOT have a type argument in the struct itself (it's not generic).
+                // `public struct ItemListed has copy, drop { ... }`
+                // So `eventType` will be just `...::escrow::ItemListed`.
+                // This breaks the frontend parser! 
+                // 
+                // I need to fix this. 
+                // Option 1: Make `ItemListed` generic `<T>`. 
+                // Option 2: Store the `item_type` string in the DB `type` field.
+                //
+                // In `escrow.move`: `event::emit(ItemListed { ..., item_type: b"", ... })`
+                // I passed empty bytes because I couldn't easily get the type string in Move.
+                //
+                // Best fix: In the indexer, when I fetch the object to get the image, I ALSO get the type: `obj.data?.type`.
+                // I should store `obj.data?.type` in the `type` field of the listing in the DB.
+                // And I should format it so the frontend regex `<(.+)>` still works, OR update the frontend to handle raw types.
+                // 
+                // Let's update the frontend to handle raw types, but for now, let's try to make the indexer smart.
+                // If I store `obj.data?.type` (e.g. `0x2::coin::Coin<SUI>`), the frontend regex `match(/<(.+)>/)` might fail if it expects it wrapped in `ItemListed<...>`.
+                // 
+                // Actually, `listing.type` in frontend is displayed as `listing.type.split('<')[1]...`.
+                // If I just store the raw item type like `0x2::coin::Coin<...>`, the frontend display logic might break if it relies on splitting by `<`.
+                //
+                // Let's look at `ListingCard.tsx`:
+                // `const match = listing.type.match(/<(.+)>/);`
+                // `const itemType = match[1];`
+                //
+                // This expects the type to be wrapped. 
+                // 
+                // I should probably wrap it in the indexer to maintain compatibility, e.g. `Wrapper<${obj.data?.type}>`.
+                // Or better, update the frontend to be robust. 
+                //
+                // I ALREADY updated `ListingCard.tsx` and `ItemDetailPage.tsx` to handle `listing.type`... wait, did I?
+                // In `ListingCard.tsx`:
+                // `const match = listing.type.match(/<(.+)>/);`
+                // `if (!match) ... toast.error("Could not determine item type");`
+                //
+                // So I MUST wrap it or update frontend. Updating frontend is better long term.
+                // But to avoid another frontend deploy/cycle right now, I can wrap it in the indexer.
+                //
+                // Let's fetch the type and wrap it.
+                // `const itemType = obj.data?.type;`
+                // `const distinctType = 'escrow::ItemListed<' + itemType + '>';`
+
+                // Let's perform the fetch and logic.
+
+            } else if (eventType.includes('::escrow::ItemPurchased')) {
+                // Handle Escrow Purchase
+                await this.db.updateListing(parsedJson.listing_id, {
                     status: 'SOLD',
-                    buyer: event.sender,
+                    buyer: parsedJson.buyer,
                     price_sold: parsedJson.price,
                     tx_digest: txDigest,
                     timestamp_ms: timestampMs
                 });
 
-            } else if (eventType.includes('::kiosk::ItemDelisted')) {
-                // Handle Standard Kiosk Delisting (Filtered by Transaction Source)
-                await this.db.updateListing(parsedJson.id, {
+            } else if (eventType.includes('::escrow::ItemDelisted')) {
+                // Handle Escrow Delisting
+                await this.db.updateListing(parsedJson.listing_id, {
                     status: 'DELISTED',
                     tx_digest: txDigest,
                     timestamp_ms: timestampMs

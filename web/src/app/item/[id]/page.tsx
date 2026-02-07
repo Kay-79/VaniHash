@@ -31,11 +31,11 @@ export default function ItemDetailPage() {
     const [listing, setListing] = useState<Listing | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const { buy, delist, isPending } = useMarketplace();
-    const { kioskId, kioskCapId } = useOwnedKiosk();
+    const { buy, cancel, isPending } = useMarketplace();
     const account = useCurrentAccount();
     const suiClient = useSuiClient();
     const [coinBalance, setCoinBalance] = useState<string | null>(null);
+    const [packageId, setPackageId] = useState<string | null>(null);
 
     useEffect(() => {
         if (!id) return;
@@ -77,25 +77,47 @@ export default function ItemDetailPage() {
         fetchCoinBalance();
     }, [listing, suiClient]);
 
-    const handleBuy = () => {
-        if (!listing || !listing.kiosk_id) {
-            toast.error("Invalid listing data (missing kiosk ID)");
-            return;
-        }
-        const match = listing.type.match(/\<(.+)\>/);
-        if (!match) {
-            toast.error("Could not determine item type");
-            return;
-        }
-        const itemType = match[1];
+    // Fetch package ID if it's an UpgradeCap
+    useEffect(() => {
+        if (!listing || !listing.type?.includes('UpgradeCap')) return;
 
-        // The buy function expects: (kioskId, itemId, itemType, priceMist, royaltyBp, onSuccess, onError)
+        const fetchUpgradeCapData = async () => {
+            try {
+                const object = await suiClient.getObject({
+                    id: listing.listing_id,
+                    options: { showContent: true },
+                });
+                if (object.data?.content?.dataType === 'moveObject') {
+                    const fields = object.data.content.fields as any;
+                    if (fields?.package) {
+                        setPackageId(fields.package);
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to fetch UpgradeCap data:', err);
+            }
+        };
+        fetchUpgradeCapData();
+    }, [listing, suiClient]);
+
+    const handleBuy = () => {
+        if (!listing) {
+            toast.error("Invalid listing data");
+            return;
+        }
+        const match = listing.type.match(/<(.+)>/);
+        const itemType = match ? match[1] : listing.type;
+
+        if (!itemType || !itemType.includes('::')) {
+            toast.error("Invalid item type");
+            return;
+        }
+
+        // The buy function expects: (listingId, itemType, priceMist, onSuccess, onError)
         buy(
-            listing.kiosk_id,     // kioskId (actual Kiosk ID)
-            listing.listing_id,  // itemId
+            listing.listing_id,  // listingId
             itemType,            // itemType
             listing.price,       // priceMist
-            0,                   // royaltyBp (0 = no royalty rule)
             () => {
                 toast.success("Item bought successfully!");
                 window.location.reload();
@@ -106,21 +128,19 @@ export default function ItemDetailPage() {
 
     const isOwner = listing && account?.address && normalizeSuiAddress(listing.seller) === normalizeSuiAddress(account.address);
 
-    const handleDelist = () => {
-        if (!listing || !kioskId || !kioskCapId) return;
+    const handleCancel = () => {
+        if (!listing) return;
         const match = listing.type.match(/<(.+)>/);
         const itemType = match ? match[1] : listing.type;
 
-        delist(
-            kioskId,
-            kioskCapId,
+        cancel(
             listing.listing_id,
             itemType,
             () => {
-                toast.success("Item delisted successfully");
+                toast.success("Item listing cancelled");
                 window.location.reload();
             },
-            (err) => toast.error("Delist failed: " + err.message)
+            (err) => toast.error("Cancel failed: " + err.message)
         );
     };
 
@@ -186,6 +206,14 @@ export default function ItemDetailPage() {
                             <p className="text-xs text-gray-500 uppercase mb-1">Object ID</p>
                             <p className="font-mono text-sm text-yellow-500 break-all select-all">{listing?.listing_id}</p>
                         </div>
+
+                        {/* Package ID for UpgradeCap */}
+                        {packageId && (
+                            <div className="mt-2 p-4 bg-purple-900/20 rounded-lg border border-purple-500/30">
+                                <p className="text-xs text-purple-400 uppercase mb-1">📦 Package ID</p>
+                                <p className="font-mono text-sm text-purple-300 break-all select-all">{packageId}</p>
+                            </div>
+                        )}
                     </div>
 
                     {/* Details - Right Side (7 cols) */}
@@ -208,7 +236,7 @@ export default function ItemDetailPage() {
                                             size="lg"
                                             variant="destructive"
                                             className="flex-1 border border-red-900 bg-red-900/20 hover:bg-red-900/40 text-red-500 font-bold h-11 text-base"
-                                            onClick={handleDelist}
+                                            onClick={handleCancel}
                                             disabled={isPending || listing.status !== 'ACTIVE'}
                                         >
                                             {isPending ? 'Processing...' : 'Cancel Listing'}

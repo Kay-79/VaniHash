@@ -1,164 +1,291 @@
+/// VaniHash Marketplace - Bidding System
+///
+/// Allows buyers to make offers on any listed item or even items not yet listed.
+/// Works with the escrow-based marketplace without requiring Kiosk or TransferPolicy.
+///
+/// Flow for existing listings:
+/// 1. Buyer calls `create_bid()` with funds + listing_id
+/// 2. Seller calls `accept_bid()` to accept and transfer item
+/// 3. Or buyer calls `cancel_bid()` to reclaim funds
+///
+/// Flow for offers on any item:
+/// 1. Buyer calls `create_offer()` with funds + target item_id
+/// 2. Owner calls `accept_offer()` transferring item directly
+/// 3. Or buyer calls `cancel_offer()` to reclaim funds
 module marketplace::bids;
 
 use marketplace::config::{Self, MarketplaceConfig};
 use sui::balance::{Self, Balance};
 use sui::coin::{Self, Coin};
 use sui::event;
-use sui::kiosk::{Self, Kiosk, KioskOwnerCap};
 use sui::sui::SUI;
-use sui::transfer_policy::{TransferPolicy, TransferRequest};
 
 /// Error codes
-const EPolicyMismatch: u64 = 1;
+const ENotBidder: u64 = 1;
+const ENotSeller: u64 = 2;
+const EBidNotActive: u64 = 3;
 
-/// A Bid entry - Shared Object
-public struct Bid has key, store {
+/// A Bid on a specific listing
+public struct Bid has key {
     id: UID,
+    /// The listing this bid is for
+    listing_id: ID,
+    /// Bidder's address
     bidder: address,
+    /// Locked funds
     amount: Balance<SUI>,
-    policy_id: ID,
+    /// Active status
+    active: bool,
 }
 
-/// Events
+/// An Offer for any item (not necessarily listed)
+public struct Offer has key {
+    id: UID,
+    /// The item being offered on
+    item_id: ID,
+    /// Offerer's address
+    offerer: address,
+    /// Locked funds
+    amount: Balance<SUI>,
+    /// Active status
+    active: bool,
+}
+
+// ============ Events ============
+
 public struct BidCreated has copy, drop {
     bid_id: ID,
-    policy_id: ID,
+    listing_id: ID,
     amount: u64,
     bidder: address,
 }
 
 public struct BidAccepted has copy, drop {
     bid_id: ID,
-    item_id: ID,
+    listing_id: ID,
+    amount: u64,
     seller: address,
     bidder: address,
-    amount: u64,
 }
 
 public struct BidCancelled has copy, drop {
     bid_id: ID,
-    bidder: address,
+    listing_id: ID,
     amount: u64,
+    bidder: address,
 }
 
-/// Create a Bid for any item in a specific Collection (Policy)
-public fun create_bid<T>(payment: Coin<SUI>, policy: &TransferPolicy<T>, ctx: &mut TxContext) {
-    let amount = coin::value(&payment);
+public struct OfferCreated has copy, drop {
+    offer_id: ID,
+    item_id: ID,
+    amount: u64,
+    offerer: address,
+}
+
+public struct OfferAccepted has copy, drop {
+    offer_id: ID,
+    item_id: ID,
+    amount: u64,
+    seller: address,
+    offerer: address,
+}
+
+public struct OfferCancelled has copy, drop {
+    offer_id: ID,
+    item_id: ID,
+    amount: u64,
+    offerer: address,
+}
+
+// ============ Bid Functions (for listed items) ============
+
+/// Create a bid on a listing
+public fun create_bid(payment: Coin<SUI>, listing_id: ID, ctx: &mut TxContext) {
+    let amount_val = coin::value(&payment);
     let bidder = ctx.sender();
-    let policy_id = object::id(policy);
 
     let bid = Bid {
         id: object::new(ctx),
+        listing_id,
         bidder,
         amount: coin::into_balance(payment),
-        policy_id,
+        active: true,
     };
-
     let bid_id = object::id(&bid);
-
-    transfer::share_object(bid);
 
     event::emit(BidCreated {
         bid_id,
-        policy_id,
-        amount,
+        listing_id,
+        amount: amount_val,
         bidder,
     });
+
+    transfer::share_object(bid);
 }
 
 /// Cancel a bid and reclaim funds
 /// Only the original bidder can cancel
-public fun cancel_bid(bid: Bid, ctx: &mut TxContext) {
-    let Bid { id, bidder, amount, policy_id: _ } = bid;
-    let bid_id = object::uid_to_inner(&id);
-    let amount_val = balance::value(&amount);
+public fun cancel_bid(bid: &mut Bid, ctx: &mut TxContext) {
+    assert!(ctx.sender() == bid.bidder, ENotBidder);
+    assert!(bid.active, EBidNotActive);
 
-    object::delete(id);
-
-    let refund = coin::from_balance(amount, ctx);
-    transfer::public_transfer(refund, bidder);
+    bid.active = false;
+    let amount_val = balance::value(&bid.amount);
+    let refund = coin::from_balance(balance::withdraw_all(&mut bid.amount), ctx);
 
     event::emit(BidCancelled {
-        bid_id,
-        bidder,
+        bid_id: object::id(bid),
+        listing_id: bid.listing_id,
         amount: amount_val,
+        bidder: bid.bidder,
     });
+
+    transfer::public_transfer(refund, bid.bidder);
 }
 
-/// Accept a Bid - returns TransferRequest for PTB to satisfy policy rules
-///
-/// Flow:
-/// 1. Validates bid matches policy
-/// 2. Lists item at bid price, then purchases (generates proper TransferRequest)
-/// 3. Collects marketplace fee from proceeds
-/// 4. Returns (Item, TransferRequest, bidder address)
-///
-/// Caller PTB must:
-/// 1. Satisfy all TransferPolicy rules (royalty, floor price, etc.)
-/// 2. Call transfer_policy::confirm_request
-/// 3. Transfer the item to bidder (address returned)
-/// 4. Seller withdraws proceeds from kiosk
+/// Accept a bid on your listing
+/// The listing item should be passed separately and transferred to bidder
+#[allow(lint(self_transfer))]
 public fun accept_bid<T: key + store>(
-    bid: Bid,
-    kiosk: &mut Kiosk,
-    cap: &KioskOwnerCap,
-    item_id: ID,
-    policy: &TransferPolicy<T>,
-    marketplace_config: &MarketplaceConfig,
+    bid: &mut Bid,
+    item: T,
+    config: &MarketplaceConfig,
     ctx: &mut TxContext,
-): (T, TransferRequest<T>, address) {
-    // 1. Destructure and validate bid
-    let Bid { id, bidder, mut amount, policy_id } = bid;
-    let bid_id = object::uid_to_inner(&id);
-    object::delete(id);
+): (T, address) {
+    assert!(bid.active, EBidNotActive);
 
-    assert!(policy_id == object::id(policy), EPolicyMismatch);
+    bid.active = false;
+    let seller = ctx.sender();
+    let bidder = bid.bidder;
+    let amount_val = balance::value(&bid.amount);
 
-    let bid_value = balance::value(&amount);
+    // Calculate and collect fee
+    let marketplace_fee = config::calculate_fee(config, amount_val);
 
-    // 2. Calculate and collect marketplace fee from bid amount
-    let marketplace_fee = config::calculate_fee(marketplace_config, bid_value);
+    // Collect fee
     if (marketplace_fee > 0) {
-        let fee_balance = balance::split(&mut amount, marketplace_fee);
+        let fee_balance = balance::split(&mut bid.amount, marketplace_fee);
         let fee_coin = coin::from_balance(fee_balance, ctx);
-        transfer::public_transfer(fee_coin, config::beneficiary(marketplace_config));
+        transfer::public_transfer(fee_coin, config::beneficiary(config));
     };
 
-    // 3. List item at remaining bid value (after fee deduction)
-    let purchase_price = balance::value(&amount);
-    kiosk::list<T>(kiosk, cap, item_id, purchase_price);
+    // Send remainder to seller
+    let seller_payment = coin::from_balance(balance::withdraw_all(&mut bid.amount), ctx);
+    transfer::public_transfer(seller_payment, seller);
 
-    // 4. Convert bid balance to coin for purchase
-    let payment = coin::from_balance(amount, ctx);
-
-    // 5. Purchase from kiosk - generates proper TransferRequest
-    let (item, request) = kiosk::purchase<T>(kiosk, item_id, payment);
-
-    // 6. Emit event
     event::emit(BidAccepted {
-        bid_id,
-        item_id,
-        seller: ctx.sender(),
+        bid_id: object::id(bid),
+        listing_id: bid.listing_id,
+        amount: amount_val,
+        seller,
         bidder,
-        amount: bid_value,
     });
 
-    // 7. Return item + request for PTB, plus bidder address for transfer
-    // Seller proceeds are now in kiosk, can withdraw via kiosk::withdraw
-    (item, request, bidder)
+    // Return item and bidder address for PTB to transfer
+    (item, bidder)
 }
 
-/// Get bid bidder address
-public fun bid_bidder(bid: &Bid): address {
-    bid.bidder
+// ============ Offer Functions (for any item) ============
+
+/// Create an offer for any item (doesn't need to be listed)
+public fun create_offer(payment: Coin<SUI>, item_id: ID, ctx: &mut TxContext) {
+    let amount_val = coin::value(&payment);
+    let offerer = ctx.sender();
+
+    let offer = Offer {
+        id: object::new(ctx),
+        item_id,
+        offerer,
+        amount: coin::into_balance(payment),
+        active: true,
+    };
+    let offer_id = object::id(&offer);
+
+    event::emit(OfferCreated {
+        offer_id,
+        item_id,
+        amount: amount_val,
+        offerer,
+    });
+
+    transfer::share_object(offer);
 }
 
-/// Get bid amount
-public fun bid_amount(bid: &Bid): u64 {
-    balance::value(&bid.amount)
+/// Cancel an offer and reclaim funds
+public fun cancel_offer(offer: &mut Offer, ctx: &mut TxContext) {
+    assert!(ctx.sender() == offer.offerer, ENotBidder);
+    assert!(offer.active, EBidNotActive);
+
+    offer.active = false;
+    let amount_val = balance::value(&offer.amount);
+    let refund = coin::from_balance(balance::withdraw_all(&mut offer.amount), ctx);
+
+    event::emit(OfferCancelled {
+        offer_id: object::id(offer),
+        item_id: offer.item_id,
+        amount: amount_val,
+        offerer: offer.offerer,
+    });
+
+    transfer::public_transfer(refund, offer.offerer);
 }
 
-/// Get bid policy ID
-public fun bid_policy_id(bid: &Bid): ID {
-    bid.policy_id
+/// Accept an offer for your item
+/// Transfers item to offerer, payment to seller (minus fee)
+#[allow(lint(self_transfer))]
+public fun accept_offer<T: key + store>(
+    offer: &mut Offer,
+    item: T,
+    config: &MarketplaceConfig,
+    ctx: &mut TxContext,
+): (T, address) {
+    assert!(offer.active, EBidNotActive);
+    assert!(object::id(&item) == offer.item_id, ENotSeller);
+
+    offer.active = false;
+    let seller = ctx.sender();
+    let offerer = offer.offerer;
+    let amount_val = balance::value(&offer.amount);
+
+    // Calculate and collect fee
+    let marketplace_fee = config::calculate_fee(config, amount_val);
+
+    if (marketplace_fee > 0) {
+        let fee_balance = balance::split(&mut offer.amount, marketplace_fee);
+        let fee_coin = coin::from_balance(fee_balance, ctx);
+        transfer::public_transfer(fee_coin, config::beneficiary(config));
+    };
+
+    // Send remainder to seller
+    let seller_payment = coin::from_balance(balance::withdraw_all(&mut offer.amount), ctx);
+    transfer::public_transfer(seller_payment, seller);
+
+    event::emit(OfferAccepted {
+        offer_id: object::id(offer),
+        item_id: offer.item_id,
+        amount: amount_val,
+        seller,
+        offerer,
+    });
+
+    // Return item and offerer address for PTB to transfer
+    (item, offerer)
 }
+
+// ============ View Functions ============
+
+public fun bid_bidder(bid: &Bid): address { bid.bidder }
+
+public fun bid_amount(bid: &Bid): u64 { balance::value(&bid.amount) }
+
+public fun bid_listing_id(bid: &Bid): ID { bid.listing_id }
+
+public fun bid_is_active(bid: &Bid): bool { bid.active }
+
+public fun offer_offerer(offer: &Offer): address { offer.offerer }
+
+public fun offer_amount(offer: &Offer): u64 { balance::value(&offer.amount) }
+
+public fun offer_item_id(offer: &Offer): ID { offer.item_id }
+
+public fun offer_is_active(offer: &Offer): bool { offer.active }

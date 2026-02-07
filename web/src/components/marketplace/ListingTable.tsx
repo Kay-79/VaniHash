@@ -7,7 +7,6 @@ import { useMarketplace } from "@/hooks/useMarketplace";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
-import { useOwnedKiosk } from "@/hooks/useOwnedKiosk";
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { normalizeSuiAddress } from "@mysten/sui/utils";
 
@@ -27,8 +26,7 @@ interface ListingTableProps {
 }
 
 export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
-    const { buy, delist, isPending } = useMarketplace();
-    const { kioskId, kioskCapId } = useOwnedKiosk();
+    const { buy, cancel, isPending } = useMarketplace();
     const account = useCurrentAccount();
     const router = useRouter();
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -76,18 +74,18 @@ export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
 
     const handleBuy = (e: React.MouseEvent, listing: Listing) => {
         e.stopPropagation();
-        // Parse type
+        // Parse type. Try to extract from <...> first (for backward compatibility), otherwise use as is.
         const match = listing.type.match(/<(.+)>/);
-        if (!match) {
-            toast.error("Could not determine item type");
+        const itemType = match ? match[1] : listing.type;
+
+        if (!itemType || !itemType.includes('::')) {
+            toast.error("Invalid item type");
             return;
         }
-        const itemType = match[1];
 
-        // The buy function expects: (kioskId, itemId, itemType, priceMist, onSuccess, onError)
+        // The buy function expects: (listingId, itemType, priceMist, onSuccess, onError)
         buy(
-            listing.seller,      // kioskId (seller's kiosk)
-            listing.listing_id,  // itemId
+            listing.listing_id,  // listingId
             itemType,            // itemType
             listing.price,       // priceMist
             () => {
@@ -190,13 +188,11 @@ export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
                                                         const match = listing.type.match(/<(.+)>/);
                                                         const itemType = match ? match[1] : listing.type;
 
-                                                        delist(
-                                                            kioskId,
-                                                            kioskCapId!,
+                                                        cancel(
                                                             listing.listing_id,
                                                             itemType,
-                                                            () => toast.success("Item delisted successfully"),
-                                                            (err) => toast.error("Delist failed: " + err.message)
+                                                            () => toast.success("Item listing cancelled"),
+                                                            (err) => toast.error("Cancel failed: " + err.message)
                                                         );
                                                     }}
                                                     disabled={isPending}

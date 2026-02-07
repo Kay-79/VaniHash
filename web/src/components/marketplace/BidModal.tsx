@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 
-export function BidModal({ itemType }: { itemType: string }) {
+export function BidModal({ listingId }: { listingId: string }) {
     const { createBid, isPending } = useBids();
     const [amount, setAmount] = useState('');
     const [isOpen, setIsOpen] = useState(false);
@@ -16,7 +16,7 @@ export function BidModal({ itemType }: { itemType: string }) {
         // Convert to MIST (Assuming input is SUI)
         const amountMist = Number(amount) * 1_000_000_000;
 
-        createBid(itemType, amountMist, (result) => {
+        createBid(listingId, amountMist, (result) => {
             console.log("Bid Created", result);
             setIsOpen(false);
             setAmount('');
