@@ -82,7 +82,7 @@ export default function LandingPage() {
                                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
                             </span>
-                            FIRST VANITY MINING PROTOCOL ON SUI
+                            FIRST VANITY ID PROTOCOL ON SUI
                         </div>
 
                         <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-8 bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-gray-500 animate-float leading-[1.1]">
@@ -98,13 +98,18 @@ export default function LandingPage() {
                             Trade your rare IDs instantly.
                         </p>
 
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-6 w-full max-w-md mx-auto">
+                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 w-full max-w-2xl mx-auto">
                             <Link href="/tasks" className="w-full sm:w-auto">
                                 <Button size="lg" className="w-full h-14 px-10 text-lg bg-white text-black hover:bg-gray-100 font-bold border-none shadow-[0_0_40px_rgba(255,255,255,0.3)] transition-all hover:scale-105 rounded-full">
                                     Start Mining
                                     <ArrowRight className="ml-2 h-5 w-5" />
                                 </Button>
                             </Link>
+                            <a href="https://youtu.be/SVllDADVxiE" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
+                                <Button variant="outline" size="lg" className="w-full h-14 px-10 text-lg border-cyan-500/30 bg-cyan-500/10 hover:bg-cyan-500/20 hover:text-white text-cyan-400 hover:border-cyan-500/50 backdrop-blur-md transition-all rounded-full">
+                                    ▶ Watch Demo
+                                </Button>
+                            </a>
                             <Link href="/docs" className="w-full sm:w-auto">
                                 <Button variant="outline" size="lg" className="w-full h-14 px-10 text-lg border-white/20 bg-white/5 hover:bg-white/10 hover:text-white text-white hover:border-white/40 backdrop-blur-md transition-all rounded-full">
                                     Read Docs
@@ -120,6 +125,34 @@ export default function LandingPage() {
                             <div className="w-6 h-10 rounded-full border-2 border-current flex justify-center p-1">
                                 <div className="w-1 h-2 bg-current rounded-full animate-scroll-down" />
                             </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Section: Demo Video */}
+                <section id="demo" className="min-h-screen w-full relative flex flex-col justify-center items-center py-20 snap-start">
+                    <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-cyan-900/10 via-[#020617] to-[#020617] z-0" />
+
+                    <div className="container mx-auto px-6 relative z-10 text-center mt-6">
+                        <h2 className="text-4xl md:text-5xl font-black text-white mb-4">
+                            See VaniHash in <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-400">Action</span>
+                        </h2>
+                        <p className="text-gray-400 max-w-2xl mx-auto mb-12 text-lg">
+                            Watch how easy it is to create custom vanity IDs for your Sui objects
+                        </p>
+
+                        {/* YouTube Embed */}
+                        <div className="max-w-4xl mx-auto aspect-video rounded-2xl overflow-hidden border border-white/10 shadow-[0_0_60px_rgba(6,182,212,0.2)]">
+                            <iframe
+                                width="100%"
+                                height="100%"
+                                src="https://www.youtube.com/embed/SVllDADVxiE"
+                                title="VaniHash Demo"
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                allowFullScreen
+                                className="w-full h-full"
+                            />
                         </div>
                     </div>
                 </section>

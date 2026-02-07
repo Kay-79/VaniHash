@@ -79,7 +79,8 @@ This project was developed with the assistance of AI coding tools:
 - **Key Prompts**: "Refactor marketplace indexing", "Fix Move visibility error", "Implement vanilla CSS styling for components".
 
 ## Live Demo
-Check out the live version here: [VaniHash Demo](https://vani-hash.vercel.app/)
+- 🌐 **Web App**: [vani-hash.vercel.app](https://vani-hash.vercel.app/)
+- 📺 **Video Demo**: [Watch on YouTube](https://youtu.be/SVllDADVxiE)
 
 ## Open Source License
 MIT License
