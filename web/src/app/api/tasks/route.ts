@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
 
         // Reward Filter (SUI)
         if (minReward || maxReward) {
-             // ... kept reward logic comment ...
+            // ... kept reward logic comment ...
         }
 
         if (search) {
@@ -41,7 +41,13 @@ export async function GET(request: NextRequest) {
 
         // Item Type Filter (using target_type)
         if (itemType) {
-             where.target_type = { contains: itemType };
+            if (itemType === 'GasObject') {
+                where.target_type = { contains: 'coin::Coin' };
+            } else if (itemType === 'Package') {
+                where.target_type = { contains: 'UpgradeCap' };
+            } else {
+                where.target_type = { contains: itemType };
+            }
         }
 
         let tasks = await prisma.task.findMany({

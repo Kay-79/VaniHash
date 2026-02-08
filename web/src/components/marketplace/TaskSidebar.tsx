@@ -48,47 +48,14 @@ export function TaskSidebar() {
                 <div className="relative">
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
                     <Input
-                        placeholder="Search Task ID..."
+                        placeholder="Search ID, Type or Pattern..."
                         className="pl-9 bg-gray-900/50 border-gray-800 focus:border-blue-500 focus:ring-blue-500/20"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
                 </div>
 
-                {/* Status Filter */}
-                <div>
-                    <h3 className="text-xs font-semibold uppercase text-gray-500 mb-3 tracking-wider">Status</h3>
-                    <div className="space-y-2">
-                        {['PENDING', 'ACTIVE', 'COMPLETED', 'CANCELLED'].map((s) => {
-                            const currentStatuses = status ? status.split(',') : [];
-                            const isSelected = currentStatuses.includes(s);
-
-                            const handleToggle = () => {
-                                // Single select logic: if selected, deselect; otherwise select only this one
-                                updateUrl('status', isSelected ? null : s);
-                            };
-
-                            return (
-                                <div
-                                    key={s}
-                                    className={`flex items-center gap-3 p-2 rounded-lg border cursor-pointer transition-colors ${isSelected
-                                        ? 'bg-blue-600/10 border-blue-500/30'
-                                        : 'border-transparent hover:bg-gray-800/30'
-                                        }`}
-                                    onClick={handleToggle}
-                                >
-                                    <div className={`h-4 w-4 rounded border flex items-center justify-center ${isSelected ? 'bg-blue-600 border-blue-600' : 'border-gray-600'
-                                        }`}>
-                                        {isSelected && <div className="h-2 w-2 bg-white rounded-sm" />}
-                                    </div>
-                                    <span className={`text-sm font-medium ${isSelected ? 'text-blue-400' : 'text-gray-400'}`}>
-                                        {s.charAt(0) + s.slice(1).toLowerCase()}
-                                    </span>
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
+                {/* Reward Filter */}
 
                 {/* Reward Filter */}
                 <div>

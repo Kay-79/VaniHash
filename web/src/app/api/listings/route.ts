@@ -20,7 +20,13 @@ export async function GET(request: NextRequest) {
 
         // Optimized Item Type Filter using DB contains
         if (itemType) {
-            where.type = { contains: itemType };
+            if (itemType === 'GasObject') {
+                where.type = { contains: '0x2::coin::Coin' };
+            } else if (itemType === 'Package') {
+                where.type = { contains: 'UpgradeCap' };
+            } else {
+                where.type = { contains: itemType };
+            }
         }
 
         const listings = await prisma.listing.findMany({

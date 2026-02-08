@@ -12,7 +12,7 @@ export function MarketplaceSidebar() {
     const [search, setSearch] = useState(searchParams.get('search') || '');
     const [minPrice, setMinPrice] = useState(searchParams.get('minPrice') || '');
     const [maxPrice, setMaxPrice] = useState(searchParams.get('maxPrice') || '');
-    
+
     // Status
     const status = searchParams.get('status') || 'ACTIVE';
 
@@ -43,62 +43,35 @@ export function MarketplaceSidebar() {
     return (
         <div className="w-72 border-r border-gray-800 h-[calc(100vh-80px)] overflow-y-auto bg-black/20 hidden md:block">
             <div className="p-4 space-y-6">
-                
+
                 {/* Search */}
                 <div className="relative">
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-                    <Input 
-                        placeholder="ID or Pattern..." 
-                        className="pl-9 bg-gray-900/50 border-gray-800 focus:border-yellow-500 focus:ring-yellow-500/20" 
+                    <Input
+                        placeholder="ID, Type or Pattern..."
+                        className="pl-9 bg-gray-900/50 border-gray-800 focus:border-yellow-500 focus:ring-yellow-500/20"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
                     />
                 </div>
 
-                {/* Status Filter */}
-                <div>
-                    <h3 className="text-xs font-semibold uppercase text-gray-500 mb-3 tracking-wider">Status</h3>
-                    <div className="space-y-2">
-                        <div 
-                            onClick={() => updateUrl('status', 'ACTIVE')}
-                            className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors ${
-                                status === 'ACTIVE' 
-                                ? 'bg-yellow-500/10 border-yellow-500/20' 
-                                : 'border-transparent hover:bg-gray-800/50'
-                            }`}
-                        >
-                            <div className={`h-2 w-2 rounded-full ${status === 'ACTIVE' ? 'bg-yellow-500' : 'bg-gray-600'}`} />
-                            <span className={`text-sm font-medium ${status === 'ACTIVE' ? 'text-yellow-500' : 'text-gray-400'}`}>Listed</span>
-                        </div>
-                        <div 
-                             onClick={() => updateUrl('status', 'SOLD')}
-                             className={`flex items-center gap-2 p-2 rounded-lg border cursor-pointer transition-colors ${
-                                status === 'SOLD' 
-                                ? 'bg-green-500/10 border-green-500/20' 
-                                : 'border-transparent hover:bg-gray-800/50'
-                            }`}
-                        >
-                            <div className={`h-2 w-2 rounded-full ${status === 'SOLD' ? 'bg-green-500' : 'bg-gray-600'}`} />
-                            <span className={`text-sm font-medium ${status === 'SOLD' ? 'text-green-500' : 'text-gray-400'}`}>Sold</span>
-                        </div>
-                    </div>
-                </div>
+                {/* Price Filter */}
 
                 {/* Price Filter */}
                 <div>
                     <h3 className="text-xs font-semibold uppercase text-gray-500 mb-3 tracking-wider">Price (SUI)</h3>
                     <div className="flex items-center gap-2">
-                        <Input 
-                            placeholder="Min" 
-                            className="bg-gray-900/50 border-gray-800" 
-                            type="number" 
+                        <Input
+                            placeholder="Min"
+                            className="bg-gray-900/50 border-gray-800"
+                            type="number"
                             value={minPrice}
                             onChange={(e) => setMinPrice(e.target.value)}
                         />
                         <span className="text-gray-600">-</span>
-                        <Input 
-                            placeholder="Max" 
-                            className="bg-gray-900/50 border-gray-800" 
+                        <Input
+                            placeholder="Max"
+                            className="bg-gray-900/50 border-gray-800"
                             type="number"
                             value={maxPrice}
                             onChange={(e) => setMaxPrice(e.target.value)}
@@ -109,15 +82,14 @@ export function MarketplaceSidebar() {
                 {/* Attributes: Item Type */}
                 <div>
                     <h3 className="text-xs font-semibold uppercase text-gray-500 mb-3 tracking-wider">Item Type</h3>
-                   <div className="space-y-1">
+                    <div className="space-y-1">
                         {['GasObject', 'Package', 'NFT'].map((type) => {
-                             const isSelected = searchParams.get('itemType') === type;
-                             return (
-                                <div 
-                                    key={type} 
-                                    className={`flex items-center justify-between p-2 rounded-md cursor-pointer text-sm transition-colors ${
-                                        isSelected ? 'bg-yellow-500/10 text-yellow-500' : 'hover:bg-gray-800/30 text-gray-400'
-                                    }`}
+                            const isSelected = searchParams.get('itemType') === type;
+                            return (
+                                <div
+                                    key={type}
+                                    className={`flex items-center justify-between p-2 rounded-md cursor-pointer text-sm transition-colors ${isSelected ? 'bg-yellow-500/10 text-yellow-500' : 'hover:bg-gray-800/30 text-gray-400'
+                                        }`}
                                     onClick={() => updateUrl('itemType', isSelected ? null : type)}
                                 >
                                     <span>{type}</span>

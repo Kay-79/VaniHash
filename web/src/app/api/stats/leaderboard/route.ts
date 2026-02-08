@@ -35,19 +35,29 @@ export async function GET(request: NextRequest) {
             data = miners;
         }
         else if (type === 'creators') {
-            // Top Creators: Group by creator, count tasks, sum rewards (spent)
-            const creators = await prisma.$queryRaw`
+            // Top Spenders: (Creators + Traders)
+            // Includes Task Rewards (excluding Cancelled) + Listing Purchases
+            const spenders = await prisma.$queryRaw`
                 SELECT 
-                    creator as address, 
-                    COUNT(*) as "tasksCreated", 
-                    SUM(CAST(reward_amount AS BIGINT)) as "sUISpent"
-                FROM tasks 
-                WHERE creator IS NOT NULL
-                GROUP BY creator 
+                    T.address, 
+                    SUM(T.cnt) as "tasksCreated", -- Acts as "Total Actions" count
+                    SUM(T.spent) as "sUISpent"
+                FROM (
+                    SELECT creator as address, CAST(reward_amount AS BIGINT) as spent, 1 as cnt
+                    FROM tasks 
+                    WHERE creator IS NOT NULL AND status != 'CANCELLED'
+                    
+                    UNION ALL
+                    
+                    SELECT buyer as address, CAST(price_sold AS BIGINT) as spent, 1 as cnt
+                    FROM listings 
+                    WHERE status = 'SOLD' AND buyer IS NOT NULL
+                ) as T
+                GROUP BY T.address
                 ORDER BY "sUISpent" DESC 
                 LIMIT ${limit}
             ` as any[];
-            data = creators;
+            data = spenders;
         }
         else if (type === 'traders') {
             // Top Traders: buying volume

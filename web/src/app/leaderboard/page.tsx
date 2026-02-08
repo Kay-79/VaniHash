@@ -70,7 +70,7 @@ export default function LeaderboardPage() {
                             onClick={() => setActiveTab('creators')}
                             className={activeTab === 'creators' ? 'bg-gray-800 text-purple-500' : 'text-gray-400'}
                         >
-                            <Diamond className="mr-2 h-4 w-4" /> Top Creators
+                            <Diamond className="mr-2 h-4 w-4" /> Top Spenders
                         </Button>
                     </div>
                 </div>
@@ -105,7 +105,7 @@ export default function LeaderboardPage() {
                                         )}
                                         {activeTab === 'creators' && (
                                             <>
-                                                <th className="px-6 py-4 font-semibold">Tasks Created</th>
+                                                <th className="px-6 py-4 font-semibold">Actions</th>
                                                 <th className="px-6 py-4 font-semibold text-right">SUI Spent</th>
                                             </>
                                         )}
