@@ -1,6 +1,7 @@
 import { useSignAndExecuteTransaction, useCurrentAccount } from '@mysten/dapp-kit';
 import { Transaction } from '@mysten/sui/transactions';
 import { bcs } from '@mysten/sui/bcs';
+
 import { VANIHASH_PACKAGE_ID, MODULE_NAME } from '@/constants/chain';
 import { suiToMist } from '@/utils/formatters';
 
@@ -26,18 +27,13 @@ export function useCreateTask() {
         const rewardMist = suiToMist(rewardSui);
         const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(rewardMist)]);
 
-        const encoder = new TextEncoder();
-
-        // Helper to convert string to bytes or empty array
-        const toBytes = (str: string) => str ? Array.from(encoder.encode(str)) : [];
-
         tx.moveCall({
             target: `${VANIHASH_PACKAGE_ID}::${MODULE_NAME}::create_task`,
             arguments: [
                 coin,
-                tx.pure(bcs.vector(bcs.u8()).serialize(toBytes(prefix))),
-                tx.pure(bcs.vector(bcs.u8()).serialize(toBytes(suffix))),
-                tx.pure(bcs.vector(bcs.u8()).serialize(toBytes(contains))),
+                tx.pure.string(prefix),
+                tx.pure.string(suffix),
+                tx.pure.string(contains),
                 tx.pure.u8(taskType),  // task_type
                 tx.pure.u64(lockDurationMs), // Configurable Lock
                 tx.pure(bcs.vector(bcs.u8()).serialize(bytecode)), // Bytecode

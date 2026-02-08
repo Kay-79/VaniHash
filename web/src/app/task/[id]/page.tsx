@@ -11,7 +11,7 @@ import { AlertCircle, Copy, Cpu, Clock, ShieldCheck, User, Calendar, Coins, Hash
 import { SubmitProofDialog } from '@/components/marketplace/SubmitProofDialog';
 import { TaskStatusBadge } from '@/components/marketplace/TaskStatusBadge';
 import { shouldBeActive, isInGracePeriod, formatTimeRemaining, getGracePeriodRemaining } from '@/utils/gracePeriod';
-import { useCurrentAccount } from '@mysten/dapp-kit';
+import { useCurrentAccount, useSuiClient } from '@mysten/dapp-kit';
 import { useCancelTask } from '@/hooks/useCancelTask';
 import { Button } from '@/components/ui/Button';
 import { toast } from 'sonner';
@@ -22,6 +22,7 @@ export default function TaskDetailPage() {
     const params = useParams();
     const id = params.id as string;
     const account = useCurrentAccount();
+    const client = useSuiClient();
     const { cancelTask, isPending: isCancelling } = useCancelTask();
     const [task, setTask] = useState<Task | null>(null);
     const [loading, setLoading] = useState(true);
@@ -242,29 +243,80 @@ export default function TaskDetailPage() {
                                     </div>
 
                                     {/* Bytecode Download for Package Tasks */}
-                                    {task.task_type === 1 && task.bytecode && (
+                                    {task.task_type === 1 && (
                                         <Button
                                             variant="secondary"
                                             className="flex-1 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 py-3"
-                                            onClick={() => {
-                                                const byteCharacters = atob(task.bytecode!);
-                                                const byteNumbers = new Array(byteCharacters.length);
-                                                for (let i = 0; i < byteCharacters.length; i++) {
-                                                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                                            onClick={async () => {
+                                                const toastId = toast.loading("Fetching bytecode from chain...");
+                                                try {
+                                                    // Fetch the object from chain to get the bytecode
+                                                    const obj = await client.getObject({
+                                                        id: task.task_id,
+                                                        options: { showContent: true }
+                                                    });
+
+                                                    if (!obj.data || !obj.data.content || obj.data.content.dataType !== 'moveObject') {
+                                                        throw new Error("Failed to fetch task object content");
+                                                    }
+
+                                                    const fields = obj.data.content.fields as any;
+                                                    const bytecodeBytes = fields.bytecode; // vector<u8>
+
+                                                    if (!bytecodeBytes || !Array.isArray(bytecodeBytes)) {
+                                                        throw new Error("Bytecode field not found or invalid");
+                                                    }
+
+                                                    // Convert bytes to JSON string
+                                                    const jsonString = new TextDecoder().decode(new Uint8Array(bytecodeBytes));
+
+                                                    // Parse JSON: ["base64...", "base64..."]
+                                                    let modules: string[] = [];
+                                                    try {
+                                                        const parsed = JSON.parse(jsonString);
+                                                        if (Array.isArray(parsed)) {
+                                                            modules = parsed;
+                                                        } else {
+                                                            modules = [jsonString];
+                                                        }
+                                                    } catch (e) {
+                                                        modules = [jsonString];
+                                                    }
+
+                                                    // For multiple modules, zip them
+                                                    const JSZip = (await import('jszip')).default;
+                                                    const zip = new JSZip();
+
+                                                    modules.forEach((modBase64, index) => {
+                                                        const byteCharacters = atob(modBase64);
+                                                        const byteNumbers = new Array(byteCharacters.length);
+                                                        for (let i = 0; i < byteCharacters.length; i++) {
+                                                            byteNumbers[i] = byteCharacters.charCodeAt(i);
+                                                        }
+                                                        const byteArray = new Uint8Array(byteNumbers);
+                                                        zip.file(`module_${index}.mv`, byteArray);
+                                                    });
+
+                                                    const content = await zip.generateAsync({ type: "blob" });
+                                                    const url = URL.createObjectURL(content);
+                                                    const a = document.createElement('a');
+                                                    a.href = url;
+                                                    a.download = `package_modules_${shortenAddress(task.task_id)}.zip`;
+                                                    a.click();
+                                                    URL.revokeObjectURL(url);
+
+                                                    toast.dismiss(toastId);
+                                                    toast.success('Modules downloaded as ZIP!');
+
+                                                } catch (err) {
+                                                    console.error(err);
+                                                    toast.dismiss(toastId);
+                                                    toast.error("Failed to download: " + (err as Error).message);
                                                 }
-                                                const byteArray = new Uint8Array(byteNumbers);
-                                                const blob = new Blob([byteArray], { type: 'application/octet-stream' });
-                                                const url = URL.createObjectURL(blob);
-                                                const a = document.createElement('a');
-                                                a.href = url;
-                                                a.download = `package_${shortenAddress(task.task_id)}.mv`;
-                                                a.click();
-                                                URL.revokeObjectURL(url);
-                                                toast.success('Bytecode downloaded!');
                                             }}
                                         >
                                             <Download className="h-4 w-4 mr-2" />
-                                            Download Bytecode (.mv)
+                                            Download Modules
                                         </Button>
                                     )}
                                 </div>
