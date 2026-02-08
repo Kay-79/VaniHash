@@ -9,11 +9,11 @@ export async function GET(request: NextRequest) {
     const minPrice = searchParams.get('minPrice');
     const maxPrice = searchParams.get('maxPrice');
     const itemType = searchParams.get('itemType');
+    const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 20;
 
     try {
         const where: any = { status };
-        
-        // Basic type filtering if provided
+
         if (type) {
             where.type = type;
         }
@@ -25,7 +25,10 @@ export async function GET(request: NextRequest) {
 
         const listings = await prisma.listing.findMany({
             where,
-            orderBy: { timestamp_ms: 'desc' },
+            orderBy: [
+                { timestamp_ms: 'desc' },
+                { created_at: 'desc' }
+            ],
         });
 
         const filtered = listings.filter(item => {
@@ -33,8 +36,10 @@ export async function GET(request: NextRequest) {
             if (search) {
                 const s = search.toLowerCase();
                 const matchesId = item.listing_id.toLowerCase().includes(s);
+                const itemAny = item as any;
+                const matchesItemId = itemAny.item_id ? itemAny.item_id.toLowerCase().includes(s) : false;
                 const matchesType = item.type ? item.type.toLowerCase().includes(s) : false;
-                if (!matchesId && !matchesType) return false;
+                if (!matchesId && !matchesType && !matchesItemId) return false;
             }
 
             // Price Filter
@@ -42,11 +47,13 @@ export async function GET(request: NextRequest) {
             const p = BigInt(item.price);
             if (minPrice && p < BigInt(minPrice)) return false;
             if (maxPrice && p > BigInt(maxPrice)) return false;
-            
+
             return true;
         });
 
-        const serialized = JSON.parse(JSON.stringify(filtered, (key, value) =>
+        const sliced = filtered.slice(0, limit);
+
+        const serialized = JSON.parse(JSON.stringify(sliced, (key, value) =>
             typeof value === 'bigint' ? value.toString() : value
         ));
 

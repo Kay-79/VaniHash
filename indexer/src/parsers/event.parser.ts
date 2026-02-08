@@ -172,6 +172,56 @@ export class EventParser {
                     tx_digest: txDigest,
                     timestamp_ms: timestampMs
                 });
+
+            } else if (eventType.includes('::bids::BidCreated')) {
+                await this.db.createBid({
+                    bid_id: parsedJson.bid_id,
+                    listing_id: parsedJson.listing_id,
+                    bidder: parsedJson.bidder,
+                    amount: parsedJson.amount,
+                    status: 'ACTIVE',
+                    tx_digest: txDigest,
+                    timestamp_ms: timestampMs
+                });
+
+            } else if (eventType.includes('::bids::BidAccepted')) {
+                await this.db.updateBid(parsedJson.bid_id, {
+                    status: 'ACCEPTED',
+                    tx_digest: txDigest,
+                    timestamp_ms: timestampMs
+                });
+
+            } else if (eventType.includes('::bids::BidCancelled')) {
+                await this.db.updateBid(parsedJson.bid_id, {
+                    status: 'CANCELLED',
+                    tx_digest: txDigest,
+                    timestamp_ms: timestampMs
+                });
+
+            } else if (eventType.includes('::bids::OfferCreated')) {
+                await this.db.createOffer({
+                    offer_id: parsedJson.offer_id,
+                    item_id: parsedJson.item_id,
+                    offerer: parsedJson.offerer,
+                    amount: parsedJson.amount,
+                    status: 'ACTIVE',
+                    tx_digest: txDigest,
+                    timestamp_ms: timestampMs
+                });
+
+            } else if (eventType.includes('::bids::OfferAccepted')) {
+                await this.db.updateOffer(parsedJson.offer_id, {
+                    status: 'ACCEPTED',
+                    tx_digest: txDigest,
+                    timestamp_ms: timestampMs
+                });
+
+            } else if (eventType.includes('::bids::OfferCancelled')) {
+                await this.db.updateOffer(parsedJson.offer_id, {
+                    status: 'CANCELLED',
+                    tx_digest: txDigest,
+                    timestamp_ms: timestampMs
+                });
             }
         } catch (e: any) {
             // Ignore duplicate entry errors (idempotency)

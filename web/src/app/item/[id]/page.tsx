@@ -13,6 +13,8 @@ import { useOwnedKiosk } from '@/hooks/useOwnedKiosk';
 import { useCurrentAccount, useSuiClient } from '@mysten/dapp-kit';
 import { normalizeSuiAddress } from '@mysten/sui/utils';
 import { toast } from 'sonner';
+import { BidModal } from '@/components/marketplace/BidModal';
+import { useBids } from '@/hooks/useBids';
 
 interface Listing {
     listing_id: string;
@@ -25,6 +27,15 @@ interface Listing {
     status: string;
     timestamp_ms: number;
     tx_digest?: string;
+    bids?: Bid[];
+}
+
+interface Bid {
+    bid_id: string;
+    bidder: string;
+    amount: string;
+    status: string;
+    timestamp_ms: number;
 }
 
 export default function ItemDetailPage() {
@@ -34,6 +45,7 @@ export default function ItemDetailPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const { buy, cancel, isPending } = useMarketplace();
+    const { acceptBid, cancelBid, isPending: isBidPending } = useBids();
     const account = useCurrentAccount();
     const suiClient = useSuiClient();
     const [coinBalance, setCoinBalance] = useState<string | null>(null);
@@ -134,8 +146,23 @@ export default function ItemDetailPage() {
                 toast.success("Item listing cancelled");
                 window.location.reload();
             },
-            (err) => toast.error("Cancel failed: " + err.message)
+            (err: any) => toast.error("Cancel failed: " + err.message)
         );
+    };
+
+    const handleAcceptBid = (bid: Bid) => {
+        if (!listing) return;
+        acceptBid(listing.listing_id, bid.bid_id, listing.type, () => {
+            toast.success("Bid accepted!");
+            window.location.reload();
+        }, (err: any) => toast.error(err.message));
+    };
+
+    const handleCancelBid = (bid: Bid) => {
+        cancelBid(bid.bid_id, () => {
+            toast.success("Bid cancelled!");
+            window.location.reload();
+        }, (err: any) => toast.error(err.message));
     };
 
     if (loading) return (
@@ -268,15 +295,22 @@ export default function ItemDetailPage() {
                                                 {isPending ? 'Processing...' : 'Cancel Listing'}
                                             </Button>
                                         ) : (
-                                            <Button
-                                                size="lg"
-                                                className="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black font-bold h-11 text-base"
-                                                onClick={handleBuy}
-                                                disabled={isPending || listing.status !== 'ACTIVE'}
-                                            >
-                                                <ShoppingCart className="mr-2 h-5 w-5" />
-                                                {isPending ? 'Processing...' : 'Purchase Now'}
-                                            </Button>
+                                            <>
+                                                <Button
+                                                    size="lg"
+                                                    className="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black font-bold h-11 text-base"
+                                                    onClick={handleBuy}
+                                                    disabled={isPending || listing.status !== 'ACTIVE'}
+                                                >
+                                                    <ShoppingCart className="mr-2 h-5 w-5" />
+                                                    {isPending ? 'Processing...' : 'Purchase Now'}
+                                                </Button>
+                                                <BidModal listingId={listing.listing_id} onSuccess={() => window.location.reload()}>
+                                                    <Button size="lg" variant="secondary" className="flex-1 font-bold h-11 text-base">
+                                                        Place Bid
+                                                    </Button>
+                                                </BidModal>
+                                            </>
                                         )}
                                     </div>
                                 )}
@@ -316,6 +350,45 @@ export default function ItemDetailPage() {
                                     <Badge variant="secondary" className="bg-gray-800 text-gray-300 hover:bg-gray-700">Type: {listing.type.split('::').pop()?.replace(/>/g, '')}</Badge>
                                     <Badge variant="secondary" className="bg-gray-800 text-gray-300 hover:bg-gray-700">Status: {listing.status}</Badge>
                                 </div>
+                            </CardContent>
+                        </Card>
+
+                        {/* Bids */}
+                        <Card className="bg-gray-900/40 border-gray-800">
+                            <CardHeader>
+                                <CardTitle className="text-gray-400 text-sm uppercase">Offers</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                {listing.bids && listing.bids.length > 0 ? (
+                                    <div className="space-y-3">
+                                        {listing.bids.map((bid) => (
+                                            <div key={bid.bid_id} className="flex justify-between items-center p-3 bg-gray-900 rounded border border-gray-800">
+                                                <div className="flex flex-col">
+                                                    <span className="text-white font-mono">{mistToSui(bid.amount)} SUI</span>
+                                                    <span className="text-xs text-gray-500">
+                                                        From: {normalizeSuiAddress(bid.bidder).slice(0, 6)}...{normalizeSuiAddress(bid.bidder).slice(-4)}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    {bid.status === 'ACTIVE' && isOwner && (
+                                                        <Button size="sm" onClick={() => handleAcceptBid(bid)} disabled={isBidPending}>Accept</Button>
+                                                    )}
+                                                    {bid.status === 'ACTIVE' && account?.address && normalizeSuiAddress(bid.bidder) === normalizeSuiAddress(account.address) && (
+                                                        <Button size="sm" variant="destructive" onClick={() => handleCancelBid(bid)} disabled={isBidPending}>Cancel</Button>
+                                                    )}
+                                                    <Badge
+                                                        variant={bid.status === 'ACTIVE' ? 'default' : 'secondary'}
+                                                        className={bid.status === 'ACTIVE' ? 'bg-green-900 text-green-300' : 'bg-gray-800 text-gray-400'}
+                                                    >
+                                                        {bid.status}
+                                                    </Badge>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <p className="text-gray-500 text-sm">No offers yet.</p>
+                                )}
                             </CardContent>
                         </Card>
                     </div>

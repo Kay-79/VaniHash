@@ -8,7 +8,7 @@ export const CONFIG = {
 
     // Core Packages
     VANIHASH_PACKAGE_ID: '0x0e9eeb64deb8b10b20de2b93b083b2a90f4e38004debdfe3b2f39384c8b08a74',
-    MARKETPLACE_PACKAGE_ID: '0x5964616dbc4b9576f8ce622d939a2f6e0c3b01b9b583cbee98ca4a59766ec22d', // v4 simplified escrow only
+    MARKETPLACE_PACKAGE_ID: '0x955c025740a9ff1565b9fde3190f565dfed3d1b3e5822433e66024e93671b41d', // v5 simplified escrow only (deletes listings)
 
     // Module Names
     MODULE_VANIHASH: 'vanihash',
@@ -17,6 +17,6 @@ export const CONFIG = {
     MODULE_CONFIG: 'config',
 
     // Indexer Settings
-    POLL_INTERVAL_MS: 30000,
+    POLL_INTERVAL_MS: 20000,
     ERROR_RETRY_MS: 120000,
 };

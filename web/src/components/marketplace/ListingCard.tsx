@@ -6,6 +6,7 @@ import { useMarketplace } from "@/hooks/useMarketplace";
 import { Copy } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { BidModal } from "./BidModal";
 
 interface Listing {
     listing_id: string;
@@ -72,7 +73,7 @@ export function ListingCard({ listing, onBuySuccess }: ListingCardProps) {
             onClick={() => router.push(`/item/${listing.listing_id}`)}
         >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-bold font-mono text-yellow-500 truncate" title={listing.item_id || listing.listing_id}>
+                <CardTitle className="text-sm font-bold font-mono text-yellow-500 truncate" title={listing.item_id ? `Item ID: ${listing.item_id}` : `Listing ID: ${listing.listing_id}`}>
                     {shortenAddress(listing.item_id || listing.listing_id)}
                 </CardTitle>
                 <div onClick={copyId} className="cursor-pointer hover:text-white transition-colors">
@@ -107,16 +108,14 @@ export function ListingCard({ listing, onBuySuccess }: ListingCardProps) {
                     <Button className="flex-1" onClick={handleBuy} disabled={isPending}>
                         {isPending ? "..." : "Buy"}
                     </Button>
-                    <Button
-                        variant="secondary"
-                        className="flex-1"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            toast.info("Bidding not yet available");
-                        }}
-                    >
-                        Bid
-                    </Button>
+                    <div onClick={(e) => e.stopPropagation()}>
+                        <BidModal listingId={listing.listing_id} onSuccess={onBuySuccess}>
+                            <Button variant="secondary" className="w-full">
+                                Bid
+                            </Button>
+                        </BidModal>
+                    </div>
+
                 </div>
             </CardFooter>
         </Card>

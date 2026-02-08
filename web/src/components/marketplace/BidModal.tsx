@@ -1,11 +1,18 @@
-import { useState } from 'react';
+import { ReactNode, useState } from 'react';
 import { useBids } from '@/hooks/useBids';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
+import { toast } from 'sonner';
 
-export function BidModal({ listingId }: { listingId: string }) {
+interface BidModalProps {
+    listingId: string;
+    onSuccess?: () => void;
+    children?: ReactNode;
+}
+
+export function BidModal({ listingId, onSuccess, children }: BidModalProps) {
     const { createBid, isPending } = useBids();
     const [amount, setAmount] = useState('');
     const [isOpen, setIsOpen] = useState(false);
@@ -17,18 +24,19 @@ export function BidModal({ listingId }: { listingId: string }) {
         const amountMist = Number(amount) * 1_000_000_000;
 
         createBid(listingId, amountMist, (result) => {
-            console.log("Bid Created", result);
+            toast.success("Bid placed successfully!");
             setIsOpen(false);
             setAmount('');
+            if (onSuccess) onSuccess();
         }, (err) => {
-            console.error("Bid Failed", err);
+            toast.error("Bid failed: " + err.message);
         });
     };
 
     return (
         <Dialog open={isOpen} onOpenChange={setIsOpen}>
             <DialogTrigger asChild>
-                <Button variant="outline">Place Bid / Bounty</Button>
+                {children || <Button variant="outline">Place Bid / Bounty</Button>}
             </DialogTrigger>
             <DialogContent>
                 <DialogHeader>

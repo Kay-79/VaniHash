@@ -43,5 +43,28 @@ export class DbService {
     }
 
     // --- Bid Operations ---
-    // (Add when Schema supports Bids)
+    async createBid(data: any) {
+        return this.prisma.bid.upsert({
+            where: { bid_id: data.bid_id },
+            update: data,
+            create: data
+        });
+    }
+
+    async updateBid(bidId: string, data: any) {
+        return this.prisma.bid.update({ where: { bid_id: bidId }, data });
+    }
+
+    // --- Offer Operations ---
+    async createOffer(data: any) {
+        return this.prisma.offer.upsert({
+            where: { offer_id: data.offer_id },
+            update: data,
+            create: data
+        });
+    }
+
+    async updateOffer(offerId: string, data: any) {
+        return this.prisma.offer.update({ where: { offer_id: offerId }, data });
+    }
 }

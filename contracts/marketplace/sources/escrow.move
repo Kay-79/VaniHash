@@ -91,16 +91,20 @@ public fun list<T: key + store>(item: T, price: u64, ctx: &mut TxContext): ID {
 
 /// Purchase a listed item
 /// Collects 2% marketplace fee, sends price to seller, returns item to buyer
+/// Deletes the Listing object
 #[allow(lint(self_transfer))]
 public fun buy<T: key + store>(
-    listing: &mut Listing<T>,
+    listing: Listing<T>,
     mut payment: Coin<SUI>,
     config: &MarketplaceConfig,
     ctx: &mut TxContext,
 ): T {
-    assert!(option::is_some(&listing.item), EListingNotActive);
+    let listing_id = object::id(&listing);
+    let Listing { id, item, price, seller } = listing;
+    object::delete(id);
 
-    let price = listing.price;
+    let item = option::destroy_some(item); // Aborts if None (already handled by logic flow essentially)
+
     let marketplace_fee = config::calculate_fee(config, price);
     let total_required = price + marketplace_fee;
 
@@ -111,7 +115,7 @@ public fun buy<T: key + store>(
 
     // Send price to seller
     let seller_payment = coin::split(&mut payment, price, ctx);
-    transfer::public_transfer(seller_payment, listing.seller);
+    transfer::public_transfer(seller_payment, seller);
 
     // Refund excess to buyer
     if (coin::value(&payment) > 0) {
@@ -120,15 +124,11 @@ public fun buy<T: key + store>(
         coin::destroy_zero(payment);
     };
 
-    // Extract item
-    let item = option::extract(&mut listing.item);
-    let item_id = object::id(&item);
-
     event::emit(ItemPurchased {
-        listing_id: object::id(listing),
-        item_id,
+        listing_id,
+        item_id: object::id(&item),
         price,
-        seller: listing.seller,
+        seller,
         buyer: ctx.sender(),
         marketplace_fee,
     });
@@ -138,17 +138,20 @@ public fun buy<T: key + store>(
 
 /// Cancel a listing and reclaim the item
 /// Only the original seller can cancel
-public fun cancel<T: key + store>(listing: &mut Listing<T>, ctx: &mut TxContext): T {
-    assert!(ctx.sender() == listing.seller, ENotSeller);
-    assert!(option::is_some(&listing.item), EListingNotActive);
+/// Deletes the Listing object
+public fun cancel<T: key + store>(listing: Listing<T>, ctx: &mut TxContext): T {
+    let listing_id = object::id(&listing);
+    let Listing { id, item, price: _, seller } = listing;
 
-    let item = option::extract(&mut listing.item);
-    let item_id = object::id(&item);
+    assert!(ctx.sender() == seller, ENotSeller);
+    object::delete(id);
+
+    let item = option::destroy_some(item); // Aborts if None
 
     event::emit(ItemDelisted {
-        listing_id: object::id(listing),
-        item_id,
-        seller: listing.seller,
+        listing_id,
+        item_id: object::id(&item),
+        seller,
     });
 
     item

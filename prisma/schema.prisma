@@ -56,8 +56,38 @@ model Listing {
   tx_digest    String?
   timestamp_ms BigInt?
   created_at   DateTime @default(now()) @db.Timestamptz(6)
+  bids         Bid[]
 
   @@map("listings")
+}
+
+model Bid {
+  id           String   @id @default(uuid())
+  bid_id       String   @unique
+  listing_id   String
+  listing      Listing  @relation(fields: [listing_id], references: [listing_id])
+  bidder       String
+  amount       String
+  status       String
+  tx_digest    String?
+  timestamp_ms BigInt?
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("bids")
+}
+
+model Offer {
+  id           String   @id @default(uuid())
+  offer_id     String   @unique
+  item_id      String
+  offerer      String
+  amount       String
+  status       String
+  tx_digest    String?
+  timestamp_ms BigInt?
+  created_at   DateTime @default(now()) @db.Timestamptz(6)
+
+  @@map("offers")
 }
 
 model Cursor {

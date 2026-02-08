@@ -9,6 +9,7 @@ export async function GET(
     try {
         const listing = await prisma.listing.findUnique({
             where: { listing_id: id },
+            include: { bids: true },
         });
 
         if (!listing) {

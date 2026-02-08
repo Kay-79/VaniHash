@@ -85,6 +85,36 @@ async function main() {
                 }
             }
 
+            // 3. Poll Bids Events (Separate cursor for Bids module)
+            if (CONFIG.MARKETPLACE_PACKAGE_ID) {
+                const cursorKey = 'bids_cursor';
+                const bidsCursorData = await dbService.getCursor(cursorKey);
+                let bidsCursor = bidsCursorData
+                    ? { txDigest: bidsCursorData.tx_digest!, eventSeq: bidsCursorData.event_seq! }
+                    : undefined;
+
+                const bidsEvents = await suiService.queryEvents(
+                    CONFIG.MARKETPLACE_PACKAGE_ID,
+                    'bids',
+                    bidsCursor
+                );
+
+                // Process Bids Events
+                for (const event of bidsEvents.data) {
+                    await eventParser.parse(event);
+                }
+
+                // Update Cursor
+                if (bidsEvents.hasNextPage && bidsEvents.nextCursor) {
+                    bidsCursor = bidsEvents.nextCursor;
+                    await dbService.saveCursor(cursorKey, bidsCursor!.txDigest, bidsCursor!.eventSeq);
+                } else if (bidsEvents.data.length > 0) {
+                    const lastEvent = bidsEvents.data[bidsEvents.data.length - 1];
+                    bidsCursor = { txDigest: lastEvent.id.txDigest, eventSeq: lastEvent.id.eventSeq };
+                    await dbService.saveCursor(cursorKey, bidsCursor!.txDigest, bidsCursor!.eventSeq);
+                }
+            }
+
             if (vaniHashEvents.data.length === 0) {
                 await new Promise(resolve => setTimeout(resolve, CONFIG.POLL_INTERVAL_MS));
             }
