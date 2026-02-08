@@ -319,8 +319,8 @@ export default function TaskDetailPage() {
                                             <p className="text-sm text-green-400 mb-3 font-medium">Mine this Vanity Hash</p>
                                             <SubmitProofDialog
                                                 taskId={task.task_id}
-                                                taskType={task.task_type}
-                                                targetType={task.target_type}
+                                                taskType={task.task_type || 0}
+                                                targetType={task.target_type || ''}
                                                 onSuccess={fetchTask}
                                             />
                                         </div>
