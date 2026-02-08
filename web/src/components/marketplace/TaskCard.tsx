@@ -163,7 +163,11 @@ export function TaskCard({ task }: TaskCardProps) {
                 {/* Action */}
                 {isAvailable && (
                     <div onClick={(e) => e.stopPropagation()} className="shrink-0">
-                        <SubmitProofDialog taskId={task.task_id} />
+                        <SubmitProofDialog
+                            taskId={task.task_id}
+                            taskType={task.task_type}
+                            targetType={task.target_type}
+                        />
                     </div>
                 )}
 

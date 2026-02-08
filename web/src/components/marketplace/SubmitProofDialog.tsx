@@ -6,32 +6,79 @@ import { Label } from '@/components/ui/Label';
 import { useSubmitProof } from '@/hooks/useSubmitProof';
 import { toast } from 'sonner';
 
+import { useSuiClient, useCurrentAccount } from '@mysten/dapp-kit';
+import { normalizeSuiAddress } from '@mysten/sui/utils';
+
 interface SubmitProofDialogProps {
     taskId: string;
+    taskType: number;
+    targetType: string;
     onSuccess?: () => void;
 }
 
-export function SubmitProofDialog({ taskId, onSuccess }: SubmitProofDialogProps) {
+export function SubmitProofDialog({ taskId, taskType, targetType, onSuccess }: SubmitProofDialogProps) {
     const [open, setOpen] = useState(false);
     const [objectId, setObjectId] = useState('');
     const { submitProof, isPending } = useSubmitProof();
+    const client = useSuiClient();
+    const account = useCurrentAccount();
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!objectId) {
-            toast.error("Please enter the Object ID");
+            toast.error("Please enter the Object ID or Package ID");
             return;
         }
 
-        // Validate object ID format (0x + hex chars)
-        if (!objectId.startsWith('0x')) {
+        let targetId = objectId;
+
+        // Validate and normalize input
+        try {
+            targetId = normalizeSuiAddress(objectId);
+        } catch (e) {
             toast.error("Object ID must start with 0x");
             return;
         }
 
+        // Auto-detect UpgradeCap if user provides Package ID
+        if (Number(taskType) === 1 && account?.address) {
+            const toastId = toast.loading("Checking for UpgradeCap...");
+            try {
+                const caps = await client.getOwnedObjects({
+                    owner: account.address,
+                    filter: { StructType: '0x2::package::UpgradeCap' },
+                    options: { showContent: true }
+                });
+
+                const match = caps.data.find(obj => {
+                    const content = obj.data?.content;
+                    if (content?.dataType === 'moveObject') {
+                        const fields = content.fields as any;
+                        // For UpgradeCap, 'package' field holds the Package ID
+                        return fields?.package === targetId;
+                    }
+                    return false;
+                });
+
+                if (match?.data?.objectId) {
+                    toast.success("Found UpgradeCap for Package!", { id: toastId });
+                    targetId = match.data.objectId;
+                } else {
+                    // Try to proceed anyway, maybe user input UpgradeCap ID directly?
+                    // Or maybe we treat input as literal ID
+                    toast.dismiss(toastId);
+                }
+            } catch (error) {
+                console.error("Error finding UpgradeCap:", error);
+                toast.dismiss(toastId);
+            }
+        }
+
         submitProof(
             taskId,
-            objectId,
+            targetId,
+            taskType,
+            targetType,
             () => {
                 toast.success("Proof submitted successfully!");
                 setOpen(false);

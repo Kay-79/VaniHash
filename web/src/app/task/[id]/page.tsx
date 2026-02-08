@@ -317,7 +317,12 @@ export default function TaskDetailPage() {
                                     <div className="space-y-4">
                                         <div className="p-4 bg-green-900/10 border border-green-500/20 rounded-lg text-center">
                                             <p className="text-sm text-green-400 mb-3 font-medium">Mine this Vanity Hash</p>
-                                            <SubmitProofDialog taskId={task.task_id} onSuccess={fetchTask} />
+                                            <SubmitProofDialog
+                                                taskId={task.task_id}
+                                                taskType={task.task_type}
+                                                targetType={task.target_type}
+                                                onSuccess={fetchTask}
+                                            />
                                         </div>
                                     </div>
                                 ) : (
