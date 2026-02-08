@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 
 interface Listing {
     listing_id: string;
+    item_id?: string | null; // Added
     seller: string;
     price: string;
     image_url?: string | null;
@@ -35,9 +36,8 @@ export function ListingCard({ listing, onBuySuccess }: ListingCardProps) {
     const handleBuy = (e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
-        // Parse type. Try to extract from <...> first (for backward compatibility), otherwise use as is.
-        const match = listing.type.match(/<(.+)>/);
-        const itemType = match ? match[1] : listing.type;
+        // Direct use of listing.type
+        const itemType = listing.type;
 
         if (!itemType || !itemType.includes('::')) {
             toast.error("Invalid item type: " + listing.type);
@@ -62,7 +62,7 @@ export function ListingCard({ listing, onBuySuccess }: ListingCardProps) {
             e.preventDefault();
             e.stopPropagation();
         }
-        navigator.clipboard.writeText(listing.listing_id);
+        navigator.clipboard.writeText(listing.item_id || listing.listing_id);
         toast.success("Listing ID copied");
     };
 
@@ -72,8 +72,8 @@ export function ListingCard({ listing, onBuySuccess }: ListingCardProps) {
             onClick={() => router.push(`/item/${listing.listing_id}`)}
         >
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-bold font-mono text-yellow-500 truncate" title={listing.listing_id}>
-                    {shortenAddress(listing.listing_id)}
+                <CardTitle className="text-sm font-bold font-mono text-yellow-500 truncate" title={listing.item_id || listing.listing_id}>
+                    {shortenAddress(listing.item_id || listing.listing_id)}
                 </CardTitle>
                 <div onClick={copyId} className="cursor-pointer hover:text-white transition-colors">
                     <Copy className="h-4 w-4 text-muted-foreground" />

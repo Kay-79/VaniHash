@@ -50,46 +50,51 @@ export class EventParser {
             } else if (eventType.includes('::escrow::ItemListed')) {
                 // Handle Escrow Listing
                 const itemId = parsedJson.item_id;
+                const listingId = parsedJson.listing_id;
 
-                // Fetch Object Display and Type
+                // Fetch Listing Object to get wrapped item type and content
                 let imageUrl = '';
                 let itemType = '';
 
                 try {
-                    const obj = await this.suiService.getObject(itemId);
+                    const obj = await this.suiService.getObject(listingId);
 
                     if (obj.data?.type) {
-                        itemType = obj.data.type;
+                        const match = obj.data.type.match(/Listing<(.+)>/);
+                        if (match) {
+                            itemType = match[1];
+                        }
                     }
 
-                    const display = obj.data?.display?.data;
-                    if (display && typeof display === 'object' && 'image_url' in display) {
-                        imageUrl = String(display.image_url);
-                    } else {
-                        // Fallback to Content Fields
-                        const content = obj.data?.content;
-                        if (content && content.dataType === 'moveObject') {
-                            const fields = content.fields as any;
-                            if (fields) {
-                                if ('url' in fields) imageUrl = String(fields.url);
-                                else if ('image_url' in fields) imageUrl = String(fields.image_url);
-                                else if ('img_url' in fields) imageUrl = String(fields.img_url);
-                            }
+                    // Extract Image URL from wrapped item fields
+                    if (obj.data?.content?.dataType === 'moveObject') {
+                        const fields = obj.data.content.fields as any;
+                        const itemFields = fields?.item?.fields;
+
+                        if (itemFields) {
+                            if ('url' in itemFields) imageUrl = String(itemFields.url);
+                            else if ('image_url' in itemFields) imageUrl = String(itemFields.image_url);
+                            else if ('img_url' in itemFields) imageUrl = String(itemFields.img_url);
                         }
                     }
                 } catch (e) {
-                    console.error(`Failed to fetch object data for ${itemId}`, e);
+                    console.error(`Failed to fetch listing data for ${listingId}`, e);
                 }
 
                 console.log(`[EventParser] Upserting listing ${parsedJson.listing_id} for item ${itemId} (Type: ${itemType})`);
 
+                if (!itemType) {
+                    throw new Error(`Failed to extract item type for listing ${parsedJson.listing_id} (Item: ${itemId})`);
+                }
+
                 await this.db.createListing({
                     listing_id: parsedJson.listing_id,
+                    item_id: itemId,
                     seller: parsedJson.seller,
-                    kiosk_id: null,
+
                     price: parsedJson.price,
                     image_url: imageUrl,
-                    type: itemType || eventType, // Prefer actual item type, fallback to event type
+                    type: itemType, // Must be valid
                     status: 'ACTIVE',
                     tx_digest: txDigest,
                     timestamp_ms: timestampMs

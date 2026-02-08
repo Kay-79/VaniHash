@@ -21,11 +21,12 @@ export async function GET(request: NextRequest) {
             activities = listings.map((l: any) => ({
                 id: l.id,
                 type: l.status === 'SOLD' ? 'SALE' : l.status === 'DELISTED' ? 'DELIST' : 'LIST',
-                item: l.listing_id,
+                item: l.item_id || l.listing_id,
                 price: l.price || l.price_sold || '0',
                 image_url: l.image_url || '',
                 timestamp: Number(l.timestamp_ms || 0),
                 address: l.status === 'SOLD' ? l.buyer : l.seller,
+                listingId: l.listing_id,
                 listing_type: l.type, // The actual object type (e.g. 0x2::kiosk::ItemListed<...>)
             }));
         } else {

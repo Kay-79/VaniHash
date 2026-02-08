@@ -44,8 +44,9 @@ model Task {
 model Listing {
   id           String   @id @default(uuid())
   listing_id   String   @unique
+  item_id      String?  // The actual object ID being sold
   seller       String?
-  kiosk_id     String?
+
   price        String?
   image_url    String? // Display Image URL
   type         String?

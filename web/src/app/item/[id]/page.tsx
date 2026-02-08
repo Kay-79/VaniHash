@@ -16,13 +16,15 @@ import { toast } from 'sonner';
 
 interface Listing {
     listing_id: string;
+    item_id?: string | null; // Added
     seller: string;
-    kiosk_id: string | null;
+
     price: string;
     image_url?: string | null;
     type: string;
     status: string;
     timestamp_ms: number;
+    tx_digest?: string;
 }
 
 export default function ItemDetailPage() {
@@ -54,59 +56,51 @@ export default function ItemDetailPage() {
         fetchListing();
     }, [id]);
 
-    // Fetch coin balance if it's a SUI coin
     useEffect(() => {
-        if (!listing || !listing.type?.includes('0x2::sui::SUI')) return;
+        if (!listing) return;
 
-        const fetchCoinBalance = async () => {
+        const fetchItemDetails = async () => {
             try {
                 const object = await suiClient.getObject({
                     id: listing.listing_id,
                     options: { showContent: true },
                 });
+
                 if (object.data?.content?.dataType === 'moveObject') {
                     const fields = object.data.content.fields as any;
-                    if (fields?.balance) {
-                        setCoinBalance(fields.balance);
+
+                    // Extract wrapped item info if available - (using listing.item_id from API now)
+
+
+                    // Extract specific fields from wrapped item
+                    if (fields?.item?.fields) {
+                        const itemFields = fields.item.fields;
+                        if (itemFields.balance) {
+                            setCoinBalance(itemFields.balance);
+                        }
+                        if (itemFields.package) {
+                            setPackageId(itemFields.package);
+                        }
                     }
                 }
             } catch (err) {
-                console.error('Failed to fetch coin balance:', err);
+                console.error('Failed to fetch item details:', err);
             }
         };
-        fetchCoinBalance();
+
+        fetchItemDetails();
     }, [listing, suiClient]);
 
-    // Fetch package ID if it's an UpgradeCap
-    useEffect(() => {
-        if (!listing || !listing.type?.includes('UpgradeCap')) return;
 
-        const fetchUpgradeCapData = async () => {
-            try {
-                const object = await suiClient.getObject({
-                    id: listing.listing_id,
-                    options: { showContent: true },
-                });
-                if (object.data?.content?.dataType === 'moveObject') {
-                    const fields = object.data.content.fields as any;
-                    if (fields?.package) {
-                        setPackageId(fields.package);
-                    }
-                }
-            } catch (err) {
-                console.error('Failed to fetch UpgradeCap data:', err);
-            }
-        };
-        fetchUpgradeCapData();
-    }, [listing, suiClient]);
+
 
     const handleBuy = () => {
         if (!listing) {
             toast.error("Invalid listing data");
             return;
         }
-        const match = listing.type.match(/<(.+)>/);
-        const itemType = match ? match[1] : listing.type;
+        // Direct use of listing.type as it is already the inner type T
+        const itemType = listing.type;
 
         if (!itemType || !itemType.includes('::')) {
             toast.error("Invalid item type");
@@ -130,8 +124,8 @@ export default function ItemDetailPage() {
 
     const handleCancel = () => {
         if (!listing) return;
-        const match = listing.type.match(/<(.+)>/);
-        const itemType = match ? match[1] : listing.type;
+        // Direct use of listing.type
+        const itemType = listing.type;
 
         cancel(
             listing.listing_id,
@@ -201,11 +195,26 @@ export default function ItemDetailPage() {
                             )}
                         </Card>
 
-                        {/* Object ID below image */}
-                        <div className="mt-4 p-4 bg-gray-900/50 rounded-lg border border-gray-800">
-                            <p className="text-xs text-gray-500 uppercase mb-1">Object ID</p>
-                            <p className="font-mono text-sm text-yellow-500 break-all select-all">{listing?.listing_id}</p>
-                        </div>
+                        {/* Item Object ID */}
+                        {listing?.item_id ? (
+                            <div className="mt-4 p-4 bg-gray-900/50 rounded-lg border border-gray-800">
+                                <p className="text-xs text-gray-500 uppercase mb-1">Item Object ID</p>
+                                <p className="font-mono text-sm text-yellow-500 break-all select-all">{listing.item_id}</p>
+                            </div>
+                        ) : (
+                            <div className="mt-4 p-4 bg-gray-900/50 rounded-lg border border-gray-800">
+                                <p className="text-xs text-gray-500 uppercase mb-1">Object ID (Ref)</p>
+                                <p className="font-mono text-sm text-yellow-500 break-all select-all">{listing?.listing_id}</p>
+                            </div>
+                        )}
+
+                        {/* Listing Ref (Secondary) */}
+                        {listing?.item_id && (
+                            <div className="mt-2 p-4 bg-gray-900/30 rounded-lg border border-gray-800/50">
+                                <p className="text-xs text-gray-500 uppercase mb-1">Listing Ref</p>
+                                <p className="font-mono text-xs text-gray-400 break-all select-all">{listing?.listing_id}</p>
+                            </div>
+                        )}
 
                         {/* Package ID for UpgradeCap */}
                         {packageId && (
@@ -230,29 +239,47 @@ export default function ItemDetailPage() {
                                     </div>
                                 </div>
 
-                                <div className="mt-8 flex gap-4">
-                                    {isOwner ? (
-                                        <Button
-                                            size="lg"
-                                            variant="destructive"
-                                            className="flex-1 border border-red-900 bg-red-900/20 hover:bg-red-900/40 text-red-500 font-bold h-11 text-base"
-                                            onClick={handleCancel}
-                                            disabled={isPending || listing.status !== 'ACTIVE'}
-                                        >
-                                            {isPending ? 'Processing...' : 'Cancel Listing'}
+                                {listing.status === 'SOLD' ? (
+                                    <div className="mt-8 flex flex-col gap-3 w-full">
+                                        <Button disabled className="w-full bg-gray-800 text-gray-400 cursor-not-allowed font-bold h-11 text-base">
+                                            Item Sold
                                         </Button>
-                                    ) : (
-                                        <Button
-                                            size="lg"
-                                            className="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black font-bold h-11 text-base"
-                                            onClick={handleBuy}
-                                            disabled={isPending || listing.status !== 'ACTIVE'}
-                                        >
-                                            <ShoppingCart className="mr-2 h-5 w-5" />
-                                            {isPending ? 'Processing...' : 'Purchase Now'}
-                                        </Button>
-                                    )}
-                                </div>
+                                        {listing.tx_digest && (
+                                            <a
+                                                href={`https://suiscan.xyz/testnet/tx/${listing.tx_digest}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="text-center text-sm text-blue-400 hover:text-blue-300 hover:underline flex items-center justify-center gap-2"
+                                            >
+                                                View Transaction ↗
+                                            </a>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="mt-8 flex gap-4">
+                                        {isOwner ? (
+                                            <Button
+                                                size="lg"
+                                                variant="destructive"
+                                                className="flex-1 border border-red-900 bg-red-900/20 hover:bg-red-900/40 text-red-500 font-bold h-11 text-base"
+                                                onClick={handleCancel}
+                                                disabled={isPending || listing.status !== 'ACTIVE'}
+                                            >
+                                                {isPending ? 'Processing...' : 'Cancel Listing'}
+                                            </Button>
+                                        ) : (
+                                            <Button
+                                                size="lg"
+                                                className="flex-1 bg-yellow-500 hover:bg-yellow-400 text-black font-bold h-11 text-base"
+                                                onClick={handleBuy}
+                                                disabled={isPending || listing.status !== 'ACTIVE'}
+                                            >
+                                                <ShoppingCart className="mr-2 h-5 w-5" />
+                                                {isPending ? 'Processing...' : 'Purchase Now'}
+                                            </Button>
+                                        )}
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
 

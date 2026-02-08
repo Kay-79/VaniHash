@@ -19,6 +19,7 @@ interface ActivityItem {
     task_type?: number; // 0 = Object, 1 = Package
     target_type?: string;
     listing_type?: string; // The actual object type for market listings
+    listingId?: string; // Added for linking
 }
 
 export function ActivityFeed({ mode = 'market' }: ActivityFeedProps) {
@@ -97,7 +98,7 @@ export function ActivityFeed({ mode = 'market' }: ActivityFeedProps) {
                                     )}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <Link href={mode === 'market' ? `/item/${act.item}` : `/task/${act.item}`} className="block truncate text-sm font-medium text-gray-300 group-hover:text-white transition-colors hover:underline">
+                                    <Link href={mode === 'market' ? `/item/${act.listingId || act.item}` : `/task/${act.item}`} className="block truncate text-sm font-medium text-gray-300 group-hover:text-white transition-colors hover:underline">
                                         {act.item}
                                     </Link>
 

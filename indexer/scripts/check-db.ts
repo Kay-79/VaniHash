@@ -1,19 +1,25 @@
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
 async function main() {
-    const listingId = '0x72002e72a72b6098b05f251752156ccb42ac428ce2cfb69cb2eac43653219063';
-    console.log(`Checking DB for Listing: ${listingId}`);
+    const listingId = '0xe11615b0fc279f3662b77397bf13979a0222c5911e7e4b0a45cff03c0d3cdfc9';
+    console.log(`Checking DB for listing: ${listingId}`);
 
     const listing = await prisma.listing.findUnique({
         where: { listing_id: listingId }
     });
 
-    console.log('Listing from DB:', listing);
+    if (!listing) {
+        console.log('Listing NOT FOUND in DB');
+    } else {
+        console.log('Listing FOUND:', listing);
+    }
 }
 
 main()
-    .catch(console.error)
-    .finally(() => prisma.$disconnect());
+    .catch(e => console.error(e))
+    .finally(async () => {
+        await prisma.$disconnect();
+    });
