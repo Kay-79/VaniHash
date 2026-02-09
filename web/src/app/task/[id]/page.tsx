@@ -51,7 +51,7 @@ export default function TaskDetailPage() {
     };
 
     if (loading) return (
-        <DashboardLayout activityMode="tasks">
+        <DashboardLayout showSidebar={false} showActivity={false}>
             <div className="flex items-center justify-center h-96">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500"></div>
             </div>
@@ -59,7 +59,7 @@ export default function TaskDetailPage() {
     );
 
     if (error || !task) return (
-        <DashboardLayout activityMode="tasks">
+        <DashboardLayout showSidebar={false} showActivity={false}>
             <div className="p-12 text-center">
                 <div className="p-4 rounded-full bg-red-500/10 text-red-400 w-fit mx-auto mb-4">
                     <AlertCircle className="h-8 w-8" />
@@ -94,7 +94,7 @@ export default function TaskDetailPage() {
     };
 
     return (
-        <DashboardLayout activityMode="tasks">
+        <DashboardLayout showSidebar={false} showActivity={false}>
             <div className="max-w-5xl mx-auto p-6 space-y-8">
 
                 {/* Header Section */}
@@ -158,7 +158,7 @@ export default function TaskDetailPage() {
                             <h3 className="text-yellow-400 font-semibold mb-1">Grace Period Active</h3>
                             <p className="text-sm text-gray-400">
                                 This task is in a {formatTimeRemaining(getGracePeriodRemaining(task.created_at))} grace period.
-                                It requires 3 confirmations (approx 3s) before becoming publicly mineable.
+                                It requires review before becoming publicly mineable.
                                 The creator can cancel it safely during this time.
                             </p>
                         </div>

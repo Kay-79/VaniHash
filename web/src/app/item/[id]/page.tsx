@@ -168,7 +168,7 @@ export default function ItemDetailPage() {
     };
 
     if (loading) return (
-        <DashboardLayout>
+        <DashboardLayout showSidebar={false} showActivity={false}>
             <div className="flex items-center justify-center h-96">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
             </div>
@@ -176,13 +176,13 @@ export default function ItemDetailPage() {
     );
 
     if (error || !listing) return (
-        <DashboardLayout>
+        <DashboardLayout showSidebar={false} showActivity={false}>
             <div className="p-8 text-center text-red-400">Error: {error || 'Listing not found'}</div>
         </DashboardLayout>
     );
 
     return (
-        <DashboardLayout activityMode="market">
+        <DashboardLayout showSidebar={false} showActivity={false}>
             <div className="max-w-6xl mx-auto p-6 space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">

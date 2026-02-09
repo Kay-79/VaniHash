@@ -56,21 +56,21 @@ export default function LeaderboardPage() {
                             onClick={() => setActiveTab('miners')}
                             className={activeTab === 'miners' ? 'bg-gray-800 text-yellow-500' : 'text-gray-400'}
                         >
-                            <Zap className="mr-2 h-4 w-4" /> Top Miners
+                            <Zap className="mr-2 h-4 w-4" /> Miners
                         </Button>
                         <Button
                             variant={activeTab === 'traders' ? 'secondary' : 'ghost'}
                             onClick={() => setActiveTab('traders')}
                             className={activeTab === 'traders' ? 'bg-gray-800 text-blue-500' : 'text-gray-400'}
                         >
-                            <DollarSign className="mr-2 h-4 w-4" /> Top Traders
+                            <DollarSign className="mr-2 h-4 w-4" /> Traders
                         </Button>
                         <Button
                             variant={activeTab === 'creators' ? 'secondary' : 'ghost'}
                             onClick={() => setActiveTab('creators')}
                             className={activeTab === 'creators' ? 'bg-gray-800 text-purple-500' : 'text-gray-400'}
                         >
-                            <Diamond className="mr-2 h-4 w-4" /> Top Spenders
+                            <Diamond className="mr-2 h-4 w-4" /> Tasks
                         </Button>
                     </div>
                 </div>
@@ -79,9 +79,9 @@ export default function LeaderboardPage() {
                 <Card className="bg-black/40 border-gray-800 backdrop-blur-sm">
                     <CardHeader>
                         <CardTitle className="text-xl text-white">
-                            {activeTab === 'miners' && "Mining Leaders"}
-                            {activeTab === 'traders' && "Volume Leaders"}
-                            {activeTab === 'creators' && "Top Spenders"}
+                            {activeTab === 'miners' && "Miners"}
+                            {activeTab === 'traders' && "Traders"}
+                            {activeTab === 'creators' && "Tasks"}
                         </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -105,7 +105,7 @@ export default function LeaderboardPage() {
                                         )}
                                         {activeTab === 'creators' && (
                                             <>
-                                                <th className="px-6 py-4 font-semibold">Actions</th>
+                                                <th className="px-6 py-4 font-semibold">Created</th>
                                                 <th className="px-6 py-4 font-semibold text-right">SUI Spent</th>
                                             </>
                                         )}

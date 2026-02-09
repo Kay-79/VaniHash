@@ -154,7 +154,7 @@ export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
                                                     #{shortenAddress(listing.item_id || listing.listing_id)}
                                                     <Copy
                                                         className="h-3 w-3 opacity-0 group-hover/id:opacity-100 cursor-pointer hover:text-white transition-all"
-                                                        onClick={(e) => copyId(e, listing.listing_id)}
+                                                        onClick={(e) => copyId(e, listing.item_id || listing.listing_id)}
                                                     />
                                                 </div>
                                             </div>
@@ -164,7 +164,9 @@ export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
                                         {mistToSui(listing.price)} SUI
                                     </td>
                                     <td className="px-4 py-3 text-right">
-                                        <span className="text-gray-500">-</span>
+                                        <Badge variant="secondary" className="bg-gray-800 text-gray-300 font-mono text-xs">
+                                            {(listing.type.match(/<(.+)>/)?.[1] || listing.type).split('::').pop()}
+                                        </Badge>
                                     </td>
                                     <td className="px-4 py-3 text-right">
                                         <span className="text-yellow-500 hover:text-yellow-400 cursor-pointer font-mono text-xs">
