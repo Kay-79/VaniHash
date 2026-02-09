@@ -6,6 +6,7 @@ import { getTaskIcon, getTaskLabel } from '@/utils/taskType';
 import { SubmitProofDialog } from './SubmitProofDialog';
 import { Button } from "@/components/ui/Button";
 import { ListingImage } from "./ListingImage";
+import { isInGracePeriod } from '@/utils/gracePeriod';
 
 interface ActivityFeedProps {
     mode?: 'market' | 'tasks';
@@ -141,12 +142,13 @@ export function ActivityFeed({ mode = 'market' }: ActivityFeedProps) {
                                             </p>
                                         )}
 
-                                        {isTaskActive && (
+                                        {isTaskActive && !isInGracePeriod(act.timestamp) && (
                                             <div onClick={(e) => e.stopPropagation()}>
                                                 <SubmitProofDialog
                                                     taskId={act.item}
                                                     taskType={act.task_type || 0}
                                                     targetType={act.target_type || ''}
+                                                    isActive={true}
                                                     onSuccess={fetchActivity}
                                                 >
                                                     <Button variant="ghost" size="sm" className="h-5 px-2 text-[10px] bg-green-500/10 text-green-400 hover:bg-green-500/20 hover:text-green-300 border border-green-500/20">

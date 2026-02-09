@@ -7,7 +7,7 @@ export const CONFIG = {
     RPC_URL: process.env.SUI_RPC_URL, // Optional override
 
     // Core Packages
-    VANIHASH_PACKAGE_ID: '0x0e9eeb64deb8b10b20de2b93b083b2a90f4e38004debdfe3b2f39384c8b08a74',
+    VANIHASH_PACKAGE_ID: '0x000000042204842d5b4c86afecf71c92bcb7367badda77a19dd154f8e5bcbe01',
     MARKETPLACE_PACKAGE_ID: '0x955c025740a9ff1565b9fde3190f565dfed3d1b3e5822433e66024e93671b41d', // v5 simplified escrow only (deletes listings)
 
     // Module Names

@@ -1,11 +1,11 @@
-export const VANIHASH_PACKAGE_ID = '0x0e9eeb64deb8b10b20de2b93b083b2a90f4e38004debdfe3b2f39384c8b08a74';
+export const VANIHASH_PACKAGE_ID = '0x000000042204842d5b4c86afecf71c92bcb7367badda77a19dd154f8e5bcbe01';
 export const MODULE_NAME = 'vanihash';
 export const INDEXER_URL = 'http://localhost:3000';
 export const NETWORK = process.env.SUI_NETWORK || 'testnet';
 export const MARKETPLACE_PACKAGE_ID = '0x955c025740a9ff1565b9fde3190f565dfed3d1b3e5822433e66024e93671b41d';
 export const MARKETPLACE_CONFIG_ID = '0xb61ec64771ef300b054f8c2b5f658b626a84391bdf18c0cb5c4b204689f8063b';
-export const ADMIN_CAP_ID = '0x891b660d39b96c962eae3d4a0c643d768c1e95c3c169948911f761e675f483bc';
-export const VANIHASH_FEE_VAULT_ID = '0x3762a6906bfe3018771930c4fce79433294c4511aaea64280f1c8692842f9718';
+export const ADMIN_CAP_ID = '0x8fef074cc7492fc5f83302c57cbbf5c41ec36fcce6bc460e9a847bd8cb04277b';
+export const VANIHASH_FEE_VAULT_ID = '0x4d53986c94469efe240e9da83676bb88e490280868e4e13f2e267d6123815239';
 export const TRANSFER_POLICY_ID = '0x0';
 export const MINER_URL = "https://sui-id-miner.vercel.app/";
 export const SUI_GAS_OBJECT_LOGO = "https://docs.sui.io/img/logo.svg";

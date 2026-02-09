@@ -15,11 +15,12 @@ interface SubmitProofDialogProps {
     taskId: string;
     taskType: number;
     targetType: string;
+    isActive: boolean;
     onSuccess?: () => void;
     children?: React.ReactNode;
 }
 
-export function SubmitProofDialog({ taskId, taskType, targetType, onSuccess, children }: SubmitProofDialogProps) {
+export function SubmitProofDialog({ taskId, taskType, targetType, isActive, onSuccess, children }: SubmitProofDialogProps) {
     const [open, setOpen] = useState(false);
     const [objectId, setObjectId] = useState('');
     const { submitProof, isPending } = useSubmitProof();
@@ -28,6 +29,11 @@ export function SubmitProofDialog({ taskId, taskType, targetType, onSuccess, chi
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
+        if (!isActive) {
+            toast.error("Task is not active and cannot be submitted.");
+            return;
+        }
+
         if (!objectId) {
             toast.error("Please enter the Object ID or Package ID");
             return;

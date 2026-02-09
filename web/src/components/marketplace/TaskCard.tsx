@@ -167,6 +167,7 @@ export function TaskCard({ task }: TaskCardProps) {
                             taskId={task.task_id}
                             taskType={task.task_type || 0}
                             targetType={task.target_type || ''}
+                            isActive={isAvailable}
                         />
                     </div>
                 )}
