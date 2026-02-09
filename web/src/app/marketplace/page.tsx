@@ -16,7 +16,7 @@ function MarketContent() {
     const [viewMode, setViewMode] = useState<'list'>('list'); // Grid view pending
     const [searchTerm, setSearchTerm] = useState('');
 
-    const { listings, loading, refetch } = useFetchListings();
+    const { listings, loading, loadingMore, hasMore, loadMore, refetch } = useFetchListings();
 
     return (
         <DashboardLayout activityMode="market">
@@ -44,11 +44,17 @@ function MarketContent() {
                     </div>
                 </div>
 
-                <div className="bg-gray-900/30 rounded-lg border border-gray-800/50 overflow-hidden">
+                <div className="bg-gray-900/30 rounded-lg border border-gray-800/50">
                     {loading ? (
                         <div className="p-12 text-center text-gray-500">Loading market data...</div>
                     ) : (
-                        <ListingTable listings={listings} onBuySuccess={refetch} />
+                        <ListingTable 
+                            listings={listings} 
+                            onBuySuccess={refetch}
+                            loadingMore={loadingMore}
+                            hasMore={hasMore}
+                            onLoadMore={loadMore}
+                        />
                     )}
                 </div>
             </div>

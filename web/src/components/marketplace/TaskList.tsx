@@ -1,15 +1,24 @@
 import { Task } from '@/types';
 import { TaskCard } from './TaskCard';
+import { TaskTable } from './TaskTable';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Zap } from 'lucide-react';
 
 interface TaskListProps {
     tasks: Task[];
     loading?: boolean;
-    viewMode?: 'grid' | 'list';
+    loadingMore?: boolean;
+    hasMore?: boolean;
+    onLoadMore?: () => void;
+    viewMode?: 'grid' | 'list' | 'table';
 }
 
-export function TaskList({ tasks, loading, viewMode = 'grid' }: TaskListProps) {
+export function TaskList({ tasks, loading, loadingMore, hasMore, onLoadMore, viewMode = 'grid' }: TaskListProps) {
+    // Table view has its own loading/empty states
+    if (viewMode === 'table') {
+        return <TaskTable tasks={tasks} loading={loading} loadingMore={loadingMore} hasMore={hasMore} onLoadMore={onLoadMore} />;
+    }
+
     if (loading) {
         return (
             <div className={`gap-4 py-4 ${viewMode === 'grid' ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' : 'flex flex-col'}`}>

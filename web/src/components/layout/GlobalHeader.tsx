@@ -87,16 +87,8 @@ export function GlobalHeader() {
                 </nav>
             </div>
 
-            {/* Search & Wallet */}
+            {/* Wallet */}
             <div className="flex items-center gap-4">
-                <div className="relative hidden lg:block w-64">
-                    <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
-                    <Input
-                        placeholder="Search collections, tasks..."
-                        className="pl-9 bg-gray-900 border-gray-800 focus:border-yellow-500 focus:ring-yellow-500/20 h-9"
-                        onChange={(e) => handleSearch(e.target.value)}
-                    />
-                </div>
                 <WalletConnect />
             </div>
         </div>

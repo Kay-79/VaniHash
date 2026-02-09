@@ -41,7 +41,7 @@ export function MarketplaceSidebar() {
     }, [minPrice, maxPrice]);
 
     return (
-        <div className="w-72 border-r border-gray-800 h-[calc(100vh-80px)] overflow-y-auto bg-black/20 hidden md:block">
+        <div className="w-72 border-r border-gray-800 h-full overflow-y-auto bg-black/20 hidden md:block">
             <div className="p-4 space-y-6">
 
                 {/* Search */}

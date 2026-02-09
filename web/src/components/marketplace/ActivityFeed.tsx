@@ -73,7 +73,7 @@ export function ActivityFeed({ mode = 'market' }: ActivityFeedProps) {
     };
 
     return (
-        <div className="w-80 border-l border-gray-800 h-[calc(100vh-80px)] overflow-y-auto bg-black/20 hidden xl:block">
+        <div className="w-80 border-l border-gray-800 h-full overflow-y-auto bg-black/20 hidden xl:block scrollbar-hide">
             <div className="p-4 border-b border-gray-800 flex items-center justify-between sticky top-0 bg-black/40 backdrop-blur-sm z-10">
                 <h3 className="font-semibold text-white flex items-center gap-2">
                     <Activity className="h-4 w-4 text-blue-400" />

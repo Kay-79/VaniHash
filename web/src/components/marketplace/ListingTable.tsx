@@ -1,11 +1,11 @@
 import { mistToSui, formatStruct, shortenAddress } from "@/utils/formatters";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { Copy, ShoppingCart, Square, CheckSquare } from "lucide-react";
+import { Copy, ShoppingCart, Square, CheckSquare, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { useMarketplace } from "@/hooks/useMarketplace";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { normalizeSuiAddress } from "@mysten/sui/utils";
@@ -25,13 +25,42 @@ interface Listing {
 interface ListingTableProps {
     listings: Listing[];
     onBuySuccess?: () => void;
+    loadingMore?: boolean;
+    hasMore?: boolean;
+    onLoadMore?: () => void;
 }
 
-export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
+export function ListingTable({ listings, onBuySuccess, loadingMore, hasMore, onLoadMore }: ListingTableProps) {
     const { buy, cancel, isPending } = useMarketplace();
     const account = useCurrentAccount();
     const router = useRouter();
     const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+    const loaderRef = useRef<HTMLDivElement>(null);
+
+    // Intersection Observer for infinite scroll
+    useEffect(() => {
+        if (!onLoadMore || !hasMore) return;
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                if (entries[0].isIntersecting && hasMore && !loadingMore) {
+                    onLoadMore();
+                }
+            },
+            { threshold: 0.1 }
+        );
+
+        const currentRef = loaderRef.current;
+        if (currentRef) {
+            observer.observe(currentRef);
+        }
+
+        return () => {
+            if (currentRef) {
+                observer.unobserve(currentRef);
+            }
+        };
+    }, [onLoadMore, hasMore, loadingMore]);
 
     const toggleSelection = (e: React.MouseEvent, id: string) => {
         e.stopPropagation();
@@ -227,6 +256,19 @@ export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
                         })}
                     </tbody>
                 </table>
+            </div>
+
+            {/* Lazy loading trigger */}
+            <div ref={loaderRef} className="flex justify-center py-4">
+                {loadingMore && (
+                    <div className="flex items-center gap-2 text-gray-400">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <span className="text-sm">Loading more...</span>
+                    </div>
+                )}
+                {!hasMore && listings.length > 0 && (
+                    <span className="text-sm text-gray-500">No more items</span>
+                )}
             </div>
 
             {/* Batch Action Bar */}

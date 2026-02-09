@@ -4,13 +4,14 @@ import { useState, Suspense } from 'react';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { TaskList } from '@/components/marketplace/TaskList';
 import { useFetchTasks } from '@/hooks/useFetchTasks';
-import { ArrowUpDown } from 'lucide-react';
+import { ArrowUpDown, List, LayoutGrid } from 'lucide-react';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 import { MinerStats } from '@/components/miner/MinerStats';
 
 function MarketplaceContent() {
     const account = useCurrentAccount();
     const [sortBy, setSortBy] = useState<'time' | 'reward'>('time');
+    const [viewMode, setViewMode] = useState<'table' | 'list'>('table');
 
     // Tab State: 'market' | 'my_tasks' | 'history'
     const [activeTab, setActiveTab] = useState('market');
@@ -22,7 +23,7 @@ function MarketplaceContent() {
         history: { status: 'COMPLETED,CANCELLED', creator: undefined }
     }[activeTab] || {};
 
-    const { tasks, loading, refetch } = useFetchTasks(fetchOptions);
+    const { tasks, loading, loadingMore, hasMore, loadMore, refetch } = useFetchTasks(fetchOptions);
 
     // Sorting Logic
     const sortedTasks = [...(tasks || [])].sort((a, b) => {
@@ -76,17 +77,53 @@ function MarketplaceContent() {
                         </div>
 
                         <div className="flex items-center gap-3">
-                            {/* Sort Control */}
-                            <div className="flex items-center gap-2 bg-gray-900/50 p-1 rounded-lg border border-gray-800">
-                                <ArrowUpDown className="h-4 w-4 text-gray-500 ml-2" />
-                                <select
-                                    value={sortBy}
-                                    onChange={(e) => setSortBy(e.target.value as 'time' | 'reward')}
-                                    className="bg-transparent text-sm text-gray-300 border-none focus:ring-0 cursor-pointer pr-8"
+                            {/* View Mode Toggle */}
+                            {/* <div className="flex bg-gray-900/50 p-1 rounded-lg border border-gray-800">
+                                <button
+                                    onClick={() => setViewMode('table')}
+                                    className={`p-2 rounded transition-all ${viewMode === 'table'
+                                        ? 'bg-gray-700 text-white'
+                                        : 'text-gray-400 hover:text-white'
+                                        }`}
+                                    title="Table View"
                                 >
-                                    <option value="time">Newest</option>
-                                    <option value="reward">Highest Reward</option>
-                                </select>
+                                    <LayoutGrid className="h-4 w-4" />
+                                </button>
+                                <button
+                                    onClick={() => setViewMode('list')}
+                                    className={`p-2 rounded transition-all ${viewMode === 'list'
+                                        ? 'bg-gray-700 text-white'
+                                        : 'text-gray-400 hover:text-white'
+                                        }`}
+                                    title="List View"
+                                >
+                                    <List className="h-4 w-4" />
+                                </button>
+                            </div> */}
+
+                            {/* Sort Control */}
+                            <div className="flex items-center gap-1 bg-gray-900/50 p-1 rounded-lg border border-gray-800">
+                                <ArrowUpDown className="h-4 w-4 text-gray-500 ml-2" />
+                                <button
+                                    onClick={() => setSortBy('time')}
+                                    className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                                        sortBy === 'time' 
+                                            ? 'bg-blue-600 text-white' 
+                                            : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                                    }`}
+                                >
+                                    Newest
+                                </button>
+                                <button
+                                    onClick={() => setSortBy('reward')}
+                                    className={`px-3 py-1.5 text-sm rounded-md transition-colors ${
+                                        sortBy === 'reward' 
+                                            ? 'bg-blue-600 text-white' 
+                                            : 'text-gray-400 hover:text-white hover:bg-gray-800'
+                                    }`}
+                                >
+                                    Reward
+                                </button>
                             </div>
 
                             <button
@@ -98,8 +135,15 @@ function MarketplaceContent() {
                         </div>
                     </div>
 
-                    <div className="bg-gray-900/30 rounded-lg p-1">
-                        <TaskList tasks={sortedTasks} loading={loading} viewMode="list" />
+                    <div className="bg-gray-900/30 rounded-lg border border-gray-800/50">
+                        <TaskList 
+                            tasks={sortedTasks} 
+                            loading={loading} 
+                            loadingMore={loadingMore}
+                            hasMore={hasMore}
+                            onLoadMore={loadMore}
+                            viewMode={viewMode} 
+                        />
                     </div>
                 </div>
             </div>

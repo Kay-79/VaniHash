@@ -21,10 +21,10 @@ export function DashboardLayout({
         <div className="min-h-screen bg-black text-gray-200 font-sans flex flex-col">
             <GlobalHeader />
 
-            <div className="flex flex-1 overflow-hidden h-[calc(100vh-73px)]">
-                {/* Left Sidebar */}
+            <div className="flex flex-1">
+                {/* Left Sidebar - Sticky */}
                 {showSidebar && (
-                    <div className="flex-shrink-0">
+                    <div className="flex-shrink-0 sticky top-[73px] h-[calc(100vh-73px)] self-start">
                         {/* 
                             Sidebars use useSearchParams internally.
                             We must wrap in Suspense to avoid "missing suspense boundary" error during build.
@@ -40,12 +40,16 @@ export function DashboardLayout({
                 )}
 
                 {/* Main Content Area */}
-                <main className="flex-1 overflow-y-auto bg-black/10 relative">
+                <main className="flex-1 bg-black/10 relative min-h-[calc(100vh-73px)]">
                     {children}
                 </main>
 
-                {/* Right Activity Feed */}
-                {showActivity && <ActivityFeed mode={activityMode} />}
+                {/* Right Activity Feed - Sticky */}
+                {showActivity && (
+                    <div className="sticky top-[73px] h-[calc(100vh-73px)] self-start">
+                        <ActivityFeed mode={activityMode} />
+                    </div>
+                )}
             </div>
         </div>
     );

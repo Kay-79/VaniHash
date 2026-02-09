@@ -10,6 +10,7 @@ export async function GET(request: NextRequest) {
     const maxPrice = searchParams.get('maxPrice');
     const itemType = searchParams.get('itemType');
     const limit = searchParams.get('limit') ? parseInt(searchParams.get('limit')!) : 20;
+    const offset = searchParams.get('offset') ? parseInt(searchParams.get('offset')!) : 0;
 
     try {
         const where: any = { status };
@@ -57,7 +58,8 @@ export async function GET(request: NextRequest) {
             return true;
         });
 
-        const sliced = filtered.slice(0, limit);
+        // Apply offset and limit for pagination
+        const sliced = filtered.slice(offset, offset + limit);
 
         const serialized = JSON.parse(JSON.stringify(sliced, (key, value) =>
             typeof value === 'bigint' ? value.toString() : value
@@ -68,3 +70,4 @@ export async function GET(request: NextRequest) {
         return NextResponse.json({ error: (e as Error).message }, { status: 500 });
     }
 }
+
