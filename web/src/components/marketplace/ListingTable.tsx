@@ -9,9 +9,11 @@ import { useState } from "react";
 
 import { useCurrentAccount } from "@mysten/dapp-kit";
 import { normalizeSuiAddress } from "@mysten/sui/utils";
+import { ListingImage } from "./ListingImage";
 
 interface Listing {
     listing_id: string;
+    item_id: string;
     seller: string;
     price: string;
     image_url?: string | null;
@@ -142,20 +144,14 @@ export function ListingTable({ listings, onBuySuccess }: ListingTableProps) {
                                     <td className="px-4 py-3">
                                         <div className="flex items-center gap-3">
                                             <div className="h-10 w-10 rounded bg-gray-800 flex items-center justify-center border border-gray-700 overflow-hidden">
-                                                {listing.image_url ? (
-                                                    <img src={listing.image_url} alt="Item" className="w-full h-full object-cover" />
-                                                ) : listing.type?.includes('0x2::sui::SUI') ? (
-                                                    <img src="https://docs.sui.io/img/logo.svg" alt="SUI" className="w-6 h-6" />
-                                                ) : (
-                                                    <div className="text-[10px] text-gray-500 font-mono">IMG</div>
-                                                )}
+                                                <ListingImage listing={listing} variant="table" />
                                             </div>
                                             <div>
                                                 <div className="font-medium text-gray-200">
                                                     {formatStruct(listing.type.split('<')[1]?.replace('>', '') || listing.type).split('::').pop()}
                                                 </div>
                                                 <div className="text-xs text-gray-500 font-mono flex items-center gap-1 group/id">
-                                                    #{shortenAddress(listing.listing_id)}
+                                                    #{shortenAddress(listing.item_id || listing.listing_id)}
                                                     <Copy
                                                         className="h-3 w-3 opacity-0 group-hover/id:opacity-100 cursor-pointer hover:text-white transition-all"
                                                         onClick={(e) => copyId(e, listing.listing_id)}

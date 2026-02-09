@@ -3,6 +3,7 @@ import { useSearchParams } from 'next/navigation';
 
 export interface Listing {
     listing_id: string;
+    item_id: string;
     seller: string;
     price: string;
     type: string;

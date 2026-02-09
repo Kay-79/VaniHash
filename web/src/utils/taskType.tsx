@@ -1,3 +1,4 @@
+import { SUI_GAS_OBJECT_LOGO } from '@/constants/chain';
 import { Box, Package } from 'lucide-react';
 
 export const SUI_GAS_TYPE_SHORT = '0x2::coin::Coin<0x2::sui::SUI>';
@@ -34,7 +35,7 @@ export const getTaskIcon = ({ taskType, targetType, className = "w-5 h-5" }: Get
     if (isGasType(targetType)) {
         return (
             <div className="flex items-center justify-center rounded bg-blue-500/10 p-1">
-                <img src="https://docs.sui.io/img/logo.svg" alt="Sui" className={className} />
+                <img src={SUI_GAS_OBJECT_LOGO} alt="Sui" className={className} />
             </div>
         );
     }

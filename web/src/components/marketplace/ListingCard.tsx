@@ -7,10 +7,11 @@ import { Copy } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { BidModal } from "./BidModal";
+import { ListingImage } from "./ListingImage";
 
 interface Listing {
     listing_id: string;
-    item_id?: string | null; // Added
+    item_id?: string; // Added
     seller: string;
     price: string;
     image_url?: string | null;
@@ -28,11 +29,6 @@ export function ListingCard({ listing, onBuySuccess }: ListingCardProps) {
     const { buy, isPending } = useMarketplace();
 
     const router = useRouter();
-
-    // Check if listing is a SUI coin
-    const isSuiCoin = listing.type?.includes('0x2::sui::SUI') ||
-        listing.type?.includes('0x2::coin::Coin<0x2::sui::SUI>') ||
-        listing.type?.includes('Coin<0x2::sui::SUI>');
 
     const handleBuy = (e: React.MouseEvent) => {
         e.preventDefault();
@@ -82,16 +78,7 @@ export function ListingCard({ listing, onBuySuccess }: ListingCardProps) {
             </CardHeader>
             <CardContent>
                 <div className="w-full aspect-square bg-gray-900 rounded-md mb-4 overflow-hidden flex items-center justify-center border border-gray-800">
-                    {listing.image_url ? (
-                        <img src={listing.image_url} alt="Item" className="w-full h-full object-cover" />
-                    ) : isSuiCoin ? (
-                        <div className="flex flex-col items-center gap-2">
-                            <img src="https://docs.sui.io/img/logo.svg" alt="SUI" className="w-16 h-16" />
-                            <span className="text-xs text-gray-400 font-medium">SUI Coin</span>
-                        </div>
-                    ) : (
-                        <div className="text-gray-600 font-mono text-xs">No Image</div>
-                    )}
+                    <ListingImage listing={listing} variant="card" />
                 </div>
                 <div className="text-2xl font-bold">{mistToSui(listing.price)} SUI</div>
                 <p className="text-xs text-muted-foreground truncate">

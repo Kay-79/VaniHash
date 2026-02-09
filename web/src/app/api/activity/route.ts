@@ -45,6 +45,9 @@ export async function GET(request: NextRequest) {
                 address: t.status === 'COMPLETED' ? t.completer : t.creator,
                 task_type: t.task_type,
                 target_type: t.target_type,
+                prefix: t.prefix,
+                suffix: t.suffix,
+                contains: t.contains,
             }));
         }
 

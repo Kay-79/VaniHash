@@ -15,6 +15,8 @@ import { normalizeSuiAddress } from '@mysten/sui/utils';
 import { toast } from 'sonner';
 import { BidModal } from '@/components/marketplace/BidModal';
 import { useBids } from '@/hooks/useBids';
+import { SUI_GAS_OBJECT_LOGO } from '@/constants/chain';
+import { ListingImage } from '@/components/marketplace/ListingImage';
 
 interface Listing {
     listing_id: string;
@@ -196,15 +198,9 @@ export default function ItemDetailPage() {
                     {/* Visual / Main Image - Left Side (5 cols) */}
                     <div className="lg:col-span-5">
                         <Card className="bg-gray-900/30 border-gray-800 overflow-hidden aspect-square flex items-center justify-center relative group">
-                            {listing?.image_url ? (
-                                <img
-                                    src={listing.image_url}
-                                    alt="NFT"
-                                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                                />
-                            ) : listing?.type?.includes('0x2::sui::SUI') ? (
+                            {listing?.type?.includes('0x2::sui::SUI') && !listing.image_url ? (
                                 <div className="flex flex-col items-center gap-3">
-                                    <img src="https://docs.sui.io/img/logo.svg" alt="SUI" className="w-24 h-24" />
+                                    <img src={SUI_GAS_OBJECT_LOGO} alt="SUI" className="w-24 h-24" />
                                     <span className="text-gray-400 font-medium text-lg">SUI Coin</span>
                                     {coinBalance && (
                                         <div className="flex items-center gap-2 mt-2 px-4 py-2 bg-blue-500/10 border border-blue-500/30 rounded-lg">
@@ -215,10 +211,7 @@ export default function ItemDetailPage() {
                                     )}
                                 </div>
                             ) : (
-                                <div className="text-center">
-                                    <Tag className="h-20 w-20 text-gray-700 mx-auto mb-3" />
-                                    <span className="text-gray-600 font-mono text-sm">No Preview</span>
-                                </div>
+                                <ListingImage listing={listing} variant="default" />
                             )}
                         </Card>
 

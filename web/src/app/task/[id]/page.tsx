@@ -16,7 +16,7 @@ import { useCancelTask } from '@/hooks/useCancelTask';
 import { Button } from '@/components/ui/Button';
 import { toast } from 'sonner';
 import { getTaskIcon, getTaskLabel } from '@/utils/taskType';
-import { NETWORK } from '@/constants/chain';
+import { NETWORK, MINER_URL } from '@/constants/chain';
 
 export default function TaskDetailPage() {
     const params = useParams();
@@ -244,80 +244,92 @@ export default function TaskDetailPage() {
 
                                     {/* Bytecode Download for Package Tasks */}
                                     {task.task_type === 1 && (
-                                        <Button
-                                            variant="secondary"
-                                            className="flex-1 bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 py-3"
-                                            onClick={async () => {
-                                                const toastId = toast.loading("Fetching bytecode from chain...");
-                                                try {
-                                                    // Fetch the object from chain to get the bytecode
-                                                    const obj = await client.getObject({
-                                                        id: task.task_id,
-                                                        options: { showContent: true }
-                                                    });
-
-                                                    if (!obj.data || !obj.data.content || obj.data.content.dataType !== 'moveObject') {
-                                                        throw new Error("Failed to fetch task object content");
-                                                    }
-
-                                                    const fields = obj.data.content.fields as any;
-                                                    const bytecodeBytes = fields.bytecode; // vector<u8>
-
-                                                    if (!bytecodeBytes || !Array.isArray(bytecodeBytes)) {
-                                                        throw new Error("Bytecode field not found or invalid");
-                                                    }
-
-                                                    // Convert bytes to JSON string
-                                                    const jsonString = new TextDecoder().decode(new Uint8Array(bytecodeBytes));
-
-                                                    // Parse JSON: ["base64...", "base64..."]
-                                                    let modules: string[] = [];
+                                        <div className="flex flex-col gap-3 flex-1">
+                                            <div className="p-3 rounded-lg bg-blue-900/10 border border-blue-500/20 text-xs text-blue-300">
+                                                <p className="font-semibold mb-1">📦 How to Mine this Package</p>
+                                                <ol className="list-decimal list-inside space-y-1 opacity-80">
+                                                    <li>Download the bytecode modules below</li>
+                                                    <li>Use <a href={MINER_URL} target="_blank" className="underline hover:text-white">Sui Vanity Miner</a></li>
+                                                    <li>Verify modules match the task requirements</li>
+                                                    <li>Mine for a salt that produces the pattern</li>
+                                                    <li>Deploy dynamically with the found salt</li>
+                                                </ol>
+                                            </div>
+                                            <Button
+                                                variant="secondary"
+                                                className="w-full bg-purple-500/10 hover:bg-purple-500/20 text-purple-400 border border-purple-500/30 py-3"
+                                                onClick={async () => {
+                                                    const toastId = toast.loading("Fetching bytecode from chain...");
                                                     try {
-                                                        const parsed = JSON.parse(jsonString);
-                                                        if (Array.isArray(parsed)) {
-                                                            modules = parsed;
-                                                        } else {
+                                                        // Fetch the object from chain to get the bytecode
+                                                        const obj = await client.getObject({
+                                                            id: task.task_id,
+                                                            options: { showContent: true }
+                                                        });
+
+                                                        if (!obj.data || !obj.data.content || obj.data.content.dataType !== 'moveObject') {
+                                                            throw new Error("Failed to fetch task object content");
+                                                        }
+
+                                                        const fields = obj.data.content.fields as any;
+                                                        const bytecodeBytes = fields.bytecode; // vector<u8>
+
+                                                        if (!bytecodeBytes || !Array.isArray(bytecodeBytes)) {
+                                                            throw new Error("Bytecode field not found or invalid");
+                                                        }
+
+                                                        // Convert bytes to JSON string
+                                                        const jsonString = new TextDecoder().decode(new Uint8Array(bytecodeBytes));
+
+                                                        // Parse JSON: ["base64...", "base64..."]
+                                                        let modules: string[] = [];
+                                                        try {
+                                                            const parsed = JSON.parse(jsonString);
+                                                            if (Array.isArray(parsed)) {
+                                                                modules = parsed;
+                                                            } else {
+                                                                modules = [jsonString];
+                                                            }
+                                                        } catch (e) {
                                                             modules = [jsonString];
                                                         }
-                                                    } catch (e) {
-                                                        modules = [jsonString];
+
+                                                        // For multiple modules, zip them
+                                                        const JSZip = (await import('jszip')).default;
+                                                        const zip = new JSZip();
+
+                                                        modules.forEach((modBase64, index) => {
+                                                            const byteCharacters = atob(modBase64);
+                                                            const byteNumbers = new Array(byteCharacters.length);
+                                                            for (let i = 0; i < byteCharacters.length; i++) {
+                                                                byteNumbers[i] = byteCharacters.charCodeAt(i);
+                                                            }
+                                                            const byteArray = new Uint8Array(byteNumbers);
+                                                            zip.file(`module_${index}.mv`, byteArray);
+                                                        });
+
+                                                        const content = await zip.generateAsync({ type: "blob" });
+                                                        const url = URL.createObjectURL(content);
+                                                        const a = document.createElement('a');
+                                                        a.href = url;
+                                                        a.download = `package_modules_${shortenAddress(task.task_id)}.zip`;
+                                                        a.click();
+                                                        URL.revokeObjectURL(url);
+
+                                                        toast.dismiss(toastId);
+                                                        toast.success('Modules downloaded as ZIP!');
+
+                                                    } catch (err) {
+                                                        console.error(err);
+                                                        toast.dismiss(toastId);
+                                                        toast.error("Failed to download: " + (err as Error).message);
                                                     }
-
-                                                    // For multiple modules, zip them
-                                                    const JSZip = (await import('jszip')).default;
-                                                    const zip = new JSZip();
-
-                                                    modules.forEach((modBase64, index) => {
-                                                        const byteCharacters = atob(modBase64);
-                                                        const byteNumbers = new Array(byteCharacters.length);
-                                                        for (let i = 0; i < byteCharacters.length; i++) {
-                                                            byteNumbers[i] = byteCharacters.charCodeAt(i);
-                                                        }
-                                                        const byteArray = new Uint8Array(byteNumbers);
-                                                        zip.file(`module_${index}.mv`, byteArray);
-                                                    });
-
-                                                    const content = await zip.generateAsync({ type: "blob" });
-                                                    const url = URL.createObjectURL(content);
-                                                    const a = document.createElement('a');
-                                                    a.href = url;
-                                                    a.download = `package_modules_${shortenAddress(task.task_id)}.zip`;
-                                                    a.click();
-                                                    URL.revokeObjectURL(url);
-
-                                                    toast.dismiss(toastId);
-                                                    toast.success('Modules downloaded as ZIP!');
-
-                                                } catch (err) {
-                                                    console.error(err);
-                                                    toast.dismiss(toastId);
-                                                    toast.error("Failed to download: " + (err as Error).message);
-                                                }
-                                            }}
-                                        >
-                                            <Download className="h-4 w-4 mr-2" />
-                                            Download Modules
-                                        </Button>
+                                                }}
+                                            >
+                                                <Download className="h-4 w-4 mr-2" />
+                                                Download Modules
+                                            </Button>
+                                        </div>
                                     )}
                                 </div>
                             </CardContent>

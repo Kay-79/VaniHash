@@ -8,15 +8,18 @@ import { toast } from 'sonner';
 
 import { useSuiClient, useCurrentAccount } from '@mysten/dapp-kit';
 import { normalizeSuiAddress } from '@mysten/sui/utils';
+import { formatStruct } from '@/utils/formatters';
+import { MINER_URL } from '@/constants/chain';
 
 interface SubmitProofDialogProps {
     taskId: string;
     taskType: number;
     targetType: string;
     onSuccess?: () => void;
+    children?: React.ReactNode;
 }
 
-export function SubmitProofDialog({ taskId, taskType, targetType, onSuccess }: SubmitProofDialogProps) {
+export function SubmitProofDialog({ taskId, taskType, targetType, onSuccess, children }: SubmitProofDialogProps) {
     const [open, setOpen] = useState(false);
     const [objectId, setObjectId] = useState('');
     const { submitProof, isPending } = useSubmitProof();
@@ -94,9 +97,11 @@ export function SubmitProofDialog({ taskId, taskType, targetType, onSuccess }: S
     return (
         <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
-                <Button size="sm" className="ml-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold border-none shadow-[0_0_15px_rgba(6,182,212,0.4)] transition-all hover:scale-105 rounded-full px-4">
-                    Submit Proof
-                </Button>
+                {children || (
+                    <Button size="sm" className="ml-2 bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white font-bold border-none shadow-[0_0_15px_rgba(6,182,212,0.4)] transition-all hover:scale-105 rounded-full px-4">
+                        Submit Proof
+                    </Button>
+                )}
             </DialogTrigger>
             <DialogContent className="max-w-lg">
                 <DialogHeader>
@@ -104,20 +109,29 @@ export function SubmitProofDialog({ taskId, taskType, targetType, onSuccess }: S
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-4 pt-4">
                     <div className="bg-blue-900/20 border border-blue-800 rounded-lg p-4">
-                        <h4 className="text-sm font-semibold text-blue-300 mb-2">📦 How to Mine Vanity Objects</h4>
+                        <h4 className="text-sm font-semibold text-blue-300 mb-2">📦 How to Mine</h4>
                         <div className="text-xs text-gray-300 space-y-2">
-                            <p><strong>Option 1: Package ID Mining</strong></p>
-                            <ol className="list-decimal list-inside space-y-1 ml-2">
-                                <li>Deploy a Move package with <code className="bg-gray-800 px-1 rounded">sui client publish</code></li>
-                                <li>Find the <strong>UpgradeCap</strong> object ID from "Created Objects"</li>
-                                <li>Submit the UpgradeCap object ID below</li>
-                            </ol>
-                            <p className="mt-2"><strong>Option 2: Any Object</strong></p>
-                            <ol className="list-decimal list-inside space-y-1 ml-2">
-                                <li>Create/mint any object (coin, NFT, etc.)</li>
-                                <li>Check if the object ID matches the pattern</li>
-                                <li>Submit the object ID below</li>
-                            </ol>
+                            {Number(taskType) === 1 ? (
+                                <>
+                                    <p><strong>Package ID Mining</strong></p>
+                                    <ol className="list-decimal list-inside space-y-1 ml-2">
+                                        <li>Download the bytecode modules from the task page</li>
+                                        <li>Use <a href={MINER_URL} target="_blank" className="underline hover:text-white">Sui Vanity Miner</a></li>
+                                        <li>Mine and deploy with <code className="bg-gray-800 px-1 rounded">sui client publish</code></li>
+                                        <li>Find the <strong>UpgradeCap</strong> object ID</li>
+                                        <li>Submit the UpgradeCap object ID below</li>
+                                    </ol>
+                                </>
+                            ) : (
+                                <>
+                                    <p><strong>Object Mining (Target: <span className="font-mono text-cyan-400 break-all">{formatStruct(targetType) || 'Any Object'}</span>)</strong></p>
+                                    <ol className="list-decimal list-inside space-y-1 ml-2">
+                                        <li>Create/mint an object of the required type</li>
+                                        <li>Ensure the object ID matches the required pattern</li>
+                                        <li>Submit the object ID below</li>
+                                    </ol>
+                                </>
+                            )}
                         </div>
                     </div>
 

@@ -9,6 +9,7 @@ import { validatePattern } from '@/utils/validators';
 import { Box, Package, Check, Info } from 'lucide-react';
 import { Tooltip } from '@/components/ui/Tooltip';
 import { UPGRADE_CAP_TYPE, SUI_GAS_TYPE_SHORT } from '@/utils/taskType';
+import { SUI_GAS_OBJECT_LOGO } from '@/constants/chain';
 
 interface CreateTaskFormProps {
     onTaskCreated?: () => void;
@@ -258,7 +259,7 @@ export function CreateTaskForm({ onTaskCreated }: CreateTaskFormProps) {
                             )}
                             <div className="flex items-center gap-3 mb-2">
                                 <div className={`p-2 rounded-lg ${taskType === 'gas' ? 'bg-blue-500/20' : 'bg-gray-800'}`}>
-                                    <img src="https://docs.sui.io/img/logo.svg" alt="Sui" className="w-5 h-5" />
+                                    <img src={SUI_GAS_OBJECT_LOGO} alt="Sui" className="w-5 h-5" />
                                 </div>
                                 <h3 className={`font-semibold ${taskType === 'gas' ? 'text-white' : 'text-gray-300'}`}>Gas Object</h3>
                             </div>
