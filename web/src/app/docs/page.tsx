@@ -379,7 +379,7 @@ export default function DocsPage() {
                                         </div>
 
                                         <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-xl text-blue-200 text-sm">
-                                            <strong>Fair Distribution:</strong> No pre-mine, no ICO. All rewards come directly from peer-to-peer marketplace activity.
+                                            <strong>Fair:</strong> All rewards come directly from peer-to-peer marketplace activity.
                                         </div>
                                     </CardContent>
                                 </Card>
