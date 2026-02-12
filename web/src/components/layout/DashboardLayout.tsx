@@ -46,7 +46,7 @@ export function DashboardLayout({
 
                 {/* Right Activity Feed - Sticky */}
                 {showActivity && (
-                    <div className="sticky top-[73px] h-[calc(100vh-73px)] self-start">
+                    <div className="flex-shrink-0 sticky top-[73px] h-[calc(100vh-73px)] self-start">
                         <ActivityFeed mode={activityMode} />
                     </div>
                 )}

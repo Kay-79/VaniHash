@@ -3,7 +3,7 @@
 import { Task, TaskStatus, PatternType } from '@/types';
 import { mistToSui, shortenAddress } from '@/utils/formatters';
 import { Badge } from '@/components/ui/Badge';
-import { Copy, Clock, Zap, Loader2 } from 'lucide-react';
+import { Copy, Clock, Zap, Loader2, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useRef } from 'react';
@@ -11,6 +11,7 @@ import { isInGracePeriod, getGracePeriodRemaining } from '@/utils/gracePeriod';
 import { getTaskIcon, getTaskLabel } from '@/utils/taskType';
 import { SubmitProofDialog } from './SubmitProofDialog';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { EXPLORER_URL } from '@/constants/chain';
 
 interface TaskTableProps {
     tasks: Task[];
@@ -132,7 +133,7 @@ function TaskRow({ task }: { task: Task }) {
                         {getTaskIcon({ taskType: task.task_type, targetType: task.target_type, className: "h-4 w-4 text-cyan-400" })}
                     </div>
                     <div>
-                        <div className="font-mono text-sm font-medium text-gray-200">
+                        <div className="font-mono text-sm font-medium text-gray-200 break-all whitespace-normal max-w-[200px] sm:max-w-[250px]">
                             {renderPattern()}
                         </div>
                         <div className="text-xs text-gray-500 flex items-center gap-1 group/id">
@@ -195,6 +196,18 @@ function TaskRow({ task }: { task: Task }) {
                             isActive={isAvailable}
                         />
                     </div>
+                )}
+                {isCompleted && task.tx_digest && (
+                    <a
+                        href={`${EXPLORER_URL}${task.tx_digest}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="flex items-center justify-end gap-1 text-[10px] text-blue-400 hover:text-blue-300"
+                    >
+                        <ExternalLink className="h-3 w-3" />
+                        View Result
+                    </a>
                 )}
             </td>
         </tr>
@@ -259,7 +272,8 @@ export function TaskTable({ tasks, loading, loadingMore, hasMore, onLoadMore }: 
 
     return (
         <div className="w-full">
-            <table className="w-full text-sm text-left">
+            <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
                 <thead className="text-xs text-gray-500 uppercase bg-gray-900/50 border-b border-gray-800">
                     <tr>
                         <th className="px-4 py-3 font-medium tracking-wider">Pattern</th>
@@ -275,7 +289,8 @@ export function TaskTable({ tasks, loading, loadingMore, hasMore, onLoadMore }: 
                         <TaskRow key={task.task_id} task={task} />
                     ))}
                 </tbody>
-            </table>
+                </table>
+            </div>
             
             {/* Lazy loading trigger */}
             <div ref={loaderRef} className="flex justify-center py-4">

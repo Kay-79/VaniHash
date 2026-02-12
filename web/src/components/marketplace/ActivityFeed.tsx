@@ -122,7 +122,7 @@ export function ActivityFeed({ mode = 'market' }: ActivityFeedProps) {
                                 <div className="flex-1 min-w-0">
                                     {isTask ? (
                                         <div className="flex flex-col gap-0.5">
-                                            <Link href={`/task/${act.item}`} className="block truncate text-sm font-mono font-bold text-white group-hover:text-blue-400 transition-colors">
+                                            <Link href={`/task/${act.item}`} className="block text-sm font-mono font-bold text-white group-hover:text-blue-400 transition-colors break-all whitespace-normal">
                                                 {renderPattern(act) || 'Pattern'}
                                             </Link>
                                             <span className="text-[10px] text-gray-400 truncate">
@@ -130,7 +130,7 @@ export function ActivityFeed({ mode = 'market' }: ActivityFeedProps) {
                                             </span>
                                         </div>
                                     ) : (
-                                        <Link href={mode === 'market' ? `/item/${act.listingId || act.item}` : `/task/${act.item}`} className="block truncate text-sm font-medium text-gray-300 group-hover:text-white transition-colors hover:underline">
+                                        <Link href={mode === 'market' ? `/item/${act.listingId || act.item}` : `/task/${act.item}`} className="block text-sm font-medium text-gray-300 group-hover:text-white transition-colors hover:underline break-all whitespace-normal">
                                             {act.item}
                                         </Link>
                                     )}

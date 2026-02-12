@@ -9,3 +9,4 @@ export const VANIHASH_FEE_VAULT_ID = '0x4d53986c94469efe240e9da83676bb88e4902808
 export const TRANSFER_POLICY_ID = '0x0';
 export const MINER_URL = "https://sui-id-miner.vercel.app/";
 export const SUI_GAS_OBJECT_LOGO = "https://docs.sui.io/img/logo.svg";
+export const EXPLORER_URL = `https://suiscan.xyz/${NETWORK}/tx/`;
